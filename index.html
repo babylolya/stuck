@@ -617,6 +617,10 @@ fetch('items.json?v='+Date.now()).then(r=>r.ok?r.json():[]).catch(()=>[]).then(r
   if(!SHOW_PLACEHOLDERS)S.length=0;
   (real||[]).slice().reverse().forEach(it=>{ if(!S.some(s=>s.id===it.id))S.unshift(it); });
   S.forEach(s=>{ if(s.lat!=null&&s.lon!=null&&s.city&&!CITY[s.city])CITY[s.city]=[s.lat,s.lon]; });
+  // chronological: the newest peel at the top, the deeper the older; no date sinks to the bottom of its year
+  const dkey=s=>{const m=String(s.date||'').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);return m?+m[3]*10000+ +m[2]*100+ +m[1]:(+s.year||0)*10000;};
+  S.forEach((s,i)=>s._i=i); S.sort((a,b)=>dkey(b)-dkey(a)||a._i-b._i);
+  S.forEach(s=>{const m=String(s.date||'').match(/(\d{4})$/); if(m)s.year=+m[1];});
   setCount(); build();
   const h=decodeURIComponent(location.hash.slice(1)); const k=S.findIndex(s=>s.id===h); if(k>=0)openCard(k);
 });
