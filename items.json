@@ -1,5 +1,33 @@
 [
  {
+  "id": "STK-0005",
+  "city": "Bangkok",
+  "street": "Tanao Road",
+  "country": "Thailand",
+  "lat": 13.75378,
+  "lon": 100.49853,
+  "date": "26.06.2026",
+  "year": 2026,
+  "type": "Slogans",
+  "under": "",
+  "note": "",
+  "face": "L",
+  "title": "PEACE",
+  "cm": [
+   2,
+   4
+  ],
+  "w": 0.49,
+  "ar": 1.075,
+  "x": 0.08,
+  "rot": -0.1,
+  "img": "items/0005-front.webp",
+  "details": [
+   "items/0005-detail1.webp",
+   "items/0005-detail2.webp"
+  ]
+ },
+ {
   "id": "STK-0004",
   "city": "Bangkok",
   "street": "Prawet District",
