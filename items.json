@@ -1,5 +1,33 @@
 [
  {
+  "id": "STK-0006",
+  "city": "Bangkok",
+  "street": "Soi Sukhumvit 40",
+  "country": "Thailand",
+  "lat": 13.71354,
+  "lon": 100.58077,
+  "date": "16.08.2026",
+  "year": 2026,
+  "type": "Love",
+  "under": "",
+  "note": "",
+  "face": "L",
+  "title": "WANTED: For unforgivable “Crimes”",
+  "cm": [
+   3,
+   5
+  ],
+  "w": 0.52,
+  "ar": 0.705,
+  "x": 0.1,
+  "rot": 0.5,
+  "img": "items/0006-front.webp",
+  "details": [
+   "items/0006-detail1.webp",
+   "items/0006-detail2.webp"
+  ]
+ },
+ {
   "id": "STK-0005",
   "city": "Bangkok",
   "street": "Tanao Road",
