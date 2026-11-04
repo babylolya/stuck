@@ -1,5 +1,33 @@
 [
  {
+  "id": "STK-0007",
+  "city": "Si Sunthon",
+  "street": "Mai Khao",
+  "country": "Thailand",
+  "lat": 8.11013,
+  "lon": 98.30582,
+  "date": "13.08.2026",
+  "year": 2026,
+  "type": "Other",
+  "under": "",
+  "note": "",
+  "face": "L",
+  "title": "FIND NO DRIPS",
+  "cm": [
+   8,
+   10
+  ],
+  "w": 0.43,
+  "ar": 0.651,
+  "x": 0.16,
+  "rot": 0.3,
+  "img": "items/0007-front.webp",
+  "details": [
+   "items/0007-detail1.webp",
+   "items/0007-detail2.webp"
+  ]
+ },
+ {
   "id": "STK-0006",
   "city": "Bangkok",
   "street": "Soi Sukhumvit 40",
