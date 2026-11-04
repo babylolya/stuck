@@ -22,7 +22,11 @@
    "items/0003-detail2.webp"
   ],
   "back": "items/0003-back.webp",
-  "backAr": 0.513
+  "backAr": 0.513,
+  "cm": [
+   4,
+   2
+  ]
  },
  {
   "id": "STK-0002",
@@ -47,7 +51,11 @@
    "items/0002-detail1.webp",
    "items/0002-detail2.webp"
   ],
-  "note": "Hello, my name is. The back remembers the letters in reverse."
+  "note": "Hello, my name is. The back remembers the letters in reverse.",
+  "cm": [
+   9,
+   5.4
+  ]
  },
  {
   "id": "STK-0001",
@@ -74,6 +82,10 @@
    "items/0001-detail3.webp",
    "items/0001-detail4.webp"
   ],
-  "note": "A stranger, peeled whole. The back kept the words that were under him."
+  "note": "A stranger, peeled whole. The back kept the words that were under him.",
+  "cm": [
+   10,
+   8.7
+  ]
  }
 ]

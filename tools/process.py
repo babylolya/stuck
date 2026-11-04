@@ -117,7 +117,8 @@ def main():
         it = {"id": sid, "city": meta["city"], "street": meta["street"], "country": meta.get("country", ""),
               "lat": meta.get("lat"), "lon": meta.get("lon"), "date": meta["date"],
               "year": int(meta["date"][-4:]) if re.search(r"\d{4}$", meta["date"]) else 2026,
-              "type": meta["type"], "under": "", "note": meta.get("note", ""), "face": "L",
+              "type": meta["type"], "under": meta.get("under", ""), "note": meta.get("note", ""), "face": "L",
+              "title": meta.get("title", ""), "cm": meta.get("cm"),
               "w": round(random.uniform(.40, .52), 2), "ar": round(front.height / front.width, 3),
               "x": round(random.uniform(.05, .2), 2), "rot": round(random.uniform(-2, 2), 1),
               "img": f"{base}-front.webp", "details": []}

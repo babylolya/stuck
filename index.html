@@ -292,7 +292,9 @@ tr:hover td{background:#0d0d0d}
 <script>
 // placeholder data. face: L = lit front face, R = shadowed side face
 // real stickers come from items.json (filled by the Telegram bot). Placeholders below until there are enough.
-const SHOW_PLACEHOLDERS = true;
+const SHOW_PLACEHOLDERS = false;
+// real size: the pole face is about this many centimetres wide, so a 10 cm sticker takes a third of it
+const POLE_CM = 30;
 const S = [
  {id:"STK-BKK-0112",city:"Bangkok",street:"Soi Nana",year:2026,date:"03.11.2026",type:"Music",under:"Two older layers, one in Japanese",face:"L",
   w:.30,h:.20,x:.10,bg:"#111",fg:"#f2f2f2",html:'<div class="t-big" style="font-size:22px">LIVE</div><div class="t-small" style="color:#ff3b30;font-size:9px;letter-spacing:.2em">SAT · SOI 11 · 23:00</div>',rot:-2,peel:true,
@@ -345,7 +347,7 @@ function build(){
   S.forEach((s,i)=>{
     if(s.year!==lastYear){yearStarts.push({year:s.year,y});lastYear=s.year;}
     if(i===WIRES_BEFORE){wiresTop=y+20;wiresH=Math.max(780,window.innerHeight*1.15);y+=wiresH+110;yearStarts[yearStarts.length-1].y=y;}
-    const sc=(s.face==='R'?.82:1); const w=s.w*W*sc, h=(s.img? s.w*s.ar : s.h)*W*sc;
+    const sc=(s.face==='R'?.82:1); const wf=(s.cm&&s.cm[0])?Math.min(.62,Math.max(.06,s.cm[0]/POLE_CM)):s.w; const w=wf*W*sc, h=(s.img? wf*s.ar : s.h)*W*sc;
     // keep each sticker inside one face of the pole, never across the corner
     let x=s.x*W;
     if(s.face==='L'){x=Math.min(Math.max(x,W*.06),E*W-w-W*.025);}
@@ -481,8 +483,8 @@ function openCard(i){
     holder.innerHTML='<div class="side"><div class="st'+(s.peel?' peel':'')+'" style="position:absolute;inset:0;cursor:default"><div class="face" style="background:'+s.bg+';color:'+s.fg+'">'+
       s.html.replace(/font-size:(\d+)px/g,(m,n)=>'font-size:'+(n*W/(s.w*520)).toFixed(1)+'px')+'</div></div></div><div class="side back"></div>';
   }
-  document.getElementById('cId').textContent=s.id;
-  document.getElementById('cMeta').innerHTML=[['city',s.city],['street',s.street],['peeled',s.date],['type',s.type],['underneath',s.under]]
+  document.getElementById('cId').textContent=s.title?s.title:s.id;
+  document.getElementById('cMeta').innerHTML=[['no.',s.id],['city',s.city+(s.country?', '+s.country:'')],['street',s.street],['peeled',s.date],['type',s.type],['size',s.cm?s.cm[0]+' × '+s.cm[1]+' cm':''],['underneath',s.under]].filter(r=>r[1])
     .map(r=>'<div><span>'+r[0]+'</span><span>'+r[1]+'</span></div>').join('');
   document.getElementById('cNote').innerHTML=s.note?'<span class="tape">'+s.note+'</span>':'';
   document.getElementById('cDetails').innerHTML=(s.details||[]).map((d,k)=>'<figure><img src="'+d+'" alt="detail" loading="lazy"><figcaption>'+s.id+' · detail 0'+(k+1)+'</figcaption></figure>').join('');
@@ -517,7 +519,7 @@ function cellHTML(s,i){
   const iw=Math.min(window.innerWidth*.26,150);
   const icon=s.img?'<img src="'+s.img+'" alt="'+s.id+'">':
     '<div class="mini" style="background:'+s.bg+';color:'+s.fg+';aspect-ratio:'+(s.w/s.h)+'">'+s.html.replace(/font-size:(\d+)px/g,(m,n)=>'font-size:'+(n*iw*.76/(s.w*520)).toFixed(1)+'px')+'</div>';
-  return '<div class="cell" data-i="'+i+'"><div class="ic">'+icon+'</div><div class="id">'+s.id+'</div><div class="ct">'+s.city+' · '+s.year+'</div></div>';
+  return '<div class="cell" data-i="'+i+'"><div class="ic">'+icon+'</div><div class="id">'+(s.title||s.id)+'</div><div class="ct">'+s.city+' · '+s.year+'</div></div>';
 }
 // ---------- map ----------
 const CITY={"Bangkok":[13.7563,100.5018],"Hanoi":[21.0285,105.8542],"Tokyo":[35.6762,139.6503],"Ho Chi Minh City":[10.8231,106.6297],

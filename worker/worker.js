@@ -24,6 +24,7 @@ export default {
       });
       await tg(env, "setMyCommands", { commands: [
         { command: "new", description: "Новый стикер" },
+        { command: "edit", description: "Изменить стикер в архиве" },
         { command: "cancel", description: "Отменить текущий" },
       ]});
       return new Response(JSON.stringify(r, null, 2), { headers: { "content-type": "application/json" } });
@@ -73,7 +74,7 @@ async function handle(u, env) {
   if (msg && msg.text === "/start") {
     return send(env, chat,
       "Это бот архива STUCK.\n\nТвой Telegram id: " + from +
-      "\n(впиши его в OWNER_ID, если ещё не вписала)\n\nНажми /new, чтобы добавить стикер.");
+      "\n\n/new · добавить стикер\n/edit · изменить или удалить стикер в архиве");
   }
   if (env.OWNER_ID && String(from) !== String(env.OWNER_ID)) return send(env, chat, "Это личный бот архива.");
 
@@ -82,6 +83,13 @@ async function handle(u, env) {
   if (cb) await tg(env, "answerCallbackQuery", { callback_query_id: cb.id });
 
   if (msg?.text === "/cancel" || data === "cancel") { await dropState(env, chat); return send(env, chat, "Отменила. /new, чтобы начать заново."); }
+  if (msg?.text === "/edit" || data === "edit") return editList(env, chat);
+  if (data?.startsWith("e:")) return editOpen(env, chat, data.slice(2));
+  if (data?.startsWith("f:")) return editField(env, chat, data.slice(2));
+  if (data?.startsWith("del:")) return send(env, chat, "Точно удалить " + data.slice(4) + " из архива?", kb([[["Да, удалить", "delok:" + data.slice(4)], ["Нет", "e:" + data.slice(4)]]]));
+  if (data?.startsWith("delok:")) { await saveItems(env, items => items.filter(i => i.id !== data.slice(6)), "archive: remove " + data.slice(6)); await dropState(env, chat); return send(env, chat, data.slice(6) + " удалён. Сайт обновится через минуту.", kb([[["К списку", "edit"]]])); }
+  if (st?.step === "edit" && msg?.text) return editSave(env, chat, st, msg.text.trim());
+
   if (msg?.text === "/new" || data === "new" || (!st && msg && fileOf(msg))) {
     st = { step: "front", details: [], date: today() };
     await putState(env, chat, st);
@@ -149,14 +157,28 @@ async function handle(u, env) {
         if (!m) return send(env, chat, "Формат: 24.10.2026");
         st.date = `${m[1].padStart(2, "0")}.${m[2].padStart(2, "0")}.${m[3]}`;
       }
+      st.step = "size"; await putState(env, chat, st);
+      return send(env, chat, "Размер в сантиметрах: ширина и высота, например 4x2 или 10x10. Можно примерно, это нужно, чтобы на столбе стикеры были в настоящем масштабе.", kb([[["Не знаю", "skip"]]]));
+
+    case "size":
+      if (data !== "skip") {
+        const cm = parseCm(msg?.text || "");
+        if (!cm) return send(env, chat, "Напиши так: 4x2 (ширина x высота в см)");
+        st.cm = cm;
+      }
+      st.step = "title"; await putState(env, chat, st);
+      return send(env, chat, "Название стикера, если хочешь (например: Hello my name is). Можно пропустить.", kb([[["Пропустить", "skip"]]]));
+
+    case "title":
+      st.title = data === "skip" ? "" : (msg?.text || "").trim();
       st.step = "note"; await putState(env, chat, st);
-      return send(env, chat, "6/6. Одна фраза о стикере по-английски (заметка в карточке). Можно пропустить.", kb([[["Пропустить", "skip"]]]));
+      return send(env, chat, "Последнее: одна фраза о стикере по-английски (заметка в карточке). Можно пропустить.", kb([[["Пропустить", "skip"]]]));
 
     case "note":
       st.note = data === "skip" ? "" : (msg?.text || "").trim();
       st.step = "confirm"; await putState(env, chat, st);
       return send(env, chat,
-        `Проверь:\n• ${st.city}, ${st.street}\n• ${st.type}\n• ${st.date}\n• фото: лицо${st.back ? ", оборот" : ""}${st.details.length ? ", макро ×" + st.details.length : ""}\n• ${st.note || "без заметки"}`,
+        `Проверь:\n• ${st.title || "без названия"}\n• ${st.city}, ${st.street}\n• ${st.type}\n• ${st.date}\n• ${st.cm ? st.cm[0] + " × " + st.cm[1] + " см" : "размер не указан"}\n• фото: лицо${st.back ? ", оборот" : ""}${st.details.length ? ", макро ×" + st.details.length : ""}\n• ${st.note || "без заметки"}`,
         kb([[["Отправить в архив", "go"]], [["Отменить", "cancel"]]]));
 
     case "confirm":
@@ -167,6 +189,79 @@ async function handle(u, env) {
       await dropState(env, chat);
       return send(env, chat, "Готово. Обрезаю фон и публикую, это 2–4 минуты. Пришлю ссылку.");
   }
+}
+
+function parseCm(t) {
+  const m = t.replace(",", ".").match(/(\d+(?:\.\d+)?)\s*[xх×*на ]+\s*(\d+(?:\.\d+)?)/i);
+  return m ? [+m[1], +m[2]] : null;
+}
+
+// ---------- edit menu ----------
+const FIELDS = [["title", "Название"], ["city", "Город"], ["street", "Улица"], ["country", "Страна"], ["date", "Дата"], ["type", "Тема"],
+  ["cm", "Размер"], ["note", "Заметка"], ["under", "Что было под ним"]];
+const HINT = { title: "Напиши название", city: "Напиши город", street: "Напиши улицу или район", country: "Напиши страну",
+  date: "Дата: ДД.ММ.ГГГГ", type: "Тема одним словом: Music, Ads, Lost…", cm: "Размер: ширина x высота в см, например 4x2",
+  note: "Одна фраза по-английски для карточки", under: "Что было под стикером, когда ты его сняла (по-английски)" };
+
+async function loadItems(env) {
+  const f = await gh(env, "/contents/items.json?ref=main");
+  const bytes = Uint8Array.from(atob(f.content.replace(/\n/g, "")), c => c.charCodeAt(0));
+  return { items: JSON.parse(new TextDecoder().decode(bytes)), sha: f.sha };
+}
+async function saveItems(env, change, message) {
+  for (let i = 0; i < 3; i++) {
+    const { items, sha } = await loadItems(env);
+    const next = change(items);
+    try {
+      await gh(env, "/contents/items.json", "PUT", { message, sha, branch: "main",
+        content: b64(new TextEncoder().encode(JSON.stringify(next, null, 1))) });
+      return;
+    } catch (e) { if (!/409|422/.test(e.message)) throw e; }
+  }
+  throw new Error("GitHub занят, попробуй ещё раз через минуту");
+}
+const label = it => `${it.id}${it.title ? " · " + it.title : ""}${it.city && it.city !== "to be added" ? " · " + it.city : ""}`;
+
+async function editList(env, chat) {
+  const { items } = await loadItems(env);
+  if (!items.length) return send(env, chat, "В архиве пока пусто. /new");
+  return send(env, chat, "Какой стикер изменить?", kb(items.map(it => [[label(it).slice(0, 60), "e:" + it.id]])));
+}
+async function editOpen(env, chat, id) {
+  const { items } = await loadItems(env);
+  const it = items.find(i => i.id === id);
+  if (!it) return send(env, chat, "Не нашла " + id);
+  const show = v => (v == null || v === "" ? "·" : Array.isArray(v) ? v.join(" × ") + " см" : v);
+  const text = it.id + "\n\n" + FIELDS.map(([k, n]) => `${n}: ${show(it[k])}`).join("\n") + "\n\nЧто поменять?";
+  const btn = FIELDS.map(([k, n]) => [n, `f:${id}:${k}`]);
+  const rows = []; for (let i = 0; i < btn.length; i += 3) rows.push(btn.slice(i, i + 3));
+  rows.push([["Удалить стикер", "del:" + id], ["К списку", "edit"]]);
+  return send(env, chat, text, kb(rows));
+}
+async function editField(env, chat, ref) {
+  const [id, field, clear] = ref.split(":");
+  if (clear) return editSave(env, chat, { id, field }, null);
+  await putState(env, chat, { step: "edit", id, field });
+  return send(env, chat, `${id} · ${FIELDS.find(f => f[0] === field)[1]}\n${HINT[field]}`, kb([[["Очистить", "f:" + ref + ":clear"]], [["Отмена", "e:" + id]]]));
+}
+async function editSave(env, chat, st, value) {
+  let v = value;
+  if (value === null) v = st.field === "cm" ? null : "";
+  else if (st.field === "cm") { v = parseCm(value); if (!v) return send(env, chat, HINT.cm); }
+  if (st.field === "date" && value !== null) {
+    const m = value.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+    if (!m) return send(env, chat, HINT.date);
+    v = `${m[1].padStart(2, "0")}.${m[2].padStart(2, "0")}.${m[3]}`;
+  }
+  await saveItems(env, items => items.map(it => {
+    if (it.id !== st.id) return it;
+    const n = { ...it, [st.field]: v };
+    if (st.field === "date" && v) n.year = +v.slice(-4);
+    return n;
+  }), `archive: ${st.id} ${st.field}`);
+  await dropState(env, chat);
+  await send(env, chat, "Сохранила. Сайт обновится через минуту.");
+  return editOpen(env, chat, st.id);
 }
 
 async function askType(env, chat, st) {
@@ -253,7 +348,7 @@ async function commitToGitHub(env, st, chat) {
   }
   const meta = {
     city: st.city, street: st.street, country: st.country || "", lat: st.lat ?? null, lon: st.lon ?? null,
-    date: st.date, type: st.type || "Other", note: st.note || "", chat,
+    date: st.date, type: st.type || "Other", note: st.note || "", title: st.title || "", cm: st.cm || null, chat,
     files: files.map(([n]) => n),
   };
   tree.push({ path: `${dir}/meta.json`, mode: "100644", type: "blob", content: JSON.stringify(meta, null, 1) });
