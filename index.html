@@ -374,22 +374,22 @@ function build(){
   // masonry on the pole: two lanes on the lit face, one on the shadow face; small stickers fill the gaps,
   // big ones span the whole lit face. Order stays chronological top to bottom.
   const hash=t=>{let h=7;for(const c of String(t))h=(h*31+c.charCodeAt(0))%9973;return h/9973;};
-  const lanes=[{x0:W*.06,x1:W*.39,f:'L'},{x0:W*.39,x1:E*W-W*.025,f:'L'},{x0:E*W+W*.03,x1:W*.95,f:'R'}];
-  const ly=[y,y,y+W*.12];
+  const lanes=[{x0:W*.05,x1:W*.28,f:'L'},{x0:W*.28,x1:W*.50,f:'L'},{x0:W*.50,x1:E*W-W*.02,f:'L'},{x0:E*W+W*.03,x1:W*.95,f:'R'}];
+  const ly=[y,y+W*.04,y+W*.02,y+W*.06];
   const LBL=Math.max(16,W*.034)+14;
   let lastYear=null;
   S.forEach((s,i)=>{
     const wf=(s.cm&&s.cm[0])?Math.min(.62,Math.max(.06,s.cm[0]/POLE_CM)):s.w;
     const base=wf*W, hb=(s.img? wf*s.ar : s.h)*W;
     // candidates: [lanes used, face, scale]
-    const cands=[];
-    const fitsR=base*.82<=lanes[2].x1-lanes[2].x0;
-    if(base<=lanes[0].x1-lanes[0].x0){cands.push([[0],'L',1]);cands.push([[1],'L',1]);}
-    if(fitsR)cands.push([[2],'R',.82]);
-    if(base<=lanes[1].x1-lanes[0].x0)cands.push([[0,1],'L',1]);
-    if(!cands.length)cands.push([[0,1],'L',1]);
+    const cands=[], lw=k=>lanes[k].x1-lanes[k].x0, span=(a,b)=>lanes[b].x1-lanes[a].x0;
+    // the shadow face is seen at an angle: only small, wide stickers read well there (or ones marked face R)
+    const okR=s.face==='R'||(s.face!=='L'&&s.cm&&s.cm[0]<=4.5&&hb/base<=.85);
+    if(okR&&base*.82<=lw(3))cands.push([[3],'R',.82]);
+    for(let a=0;a<3;a++)for(let b2=a;b2<3;b2++)if(base<=span(a,b2)&&(b2===a||base>span(a,b2-1)||b2-a===0))cands.push([[...Array(b2-a+1).keys()].map(k=>k+a),'L',1]);
+    if(!cands.length)cands.push([[0,1,2],'L',1]);
     let best=null;
-    cands.forEach(c=>{const yy=Math.max(...c[0].map(k=>ly[k]));if(!best||yy<best.y-1)best={c,y:yy};});
+    cands.forEach(c=>{const yy=Math.max(...c[0].map(k=>ly[k])),score=yy-(c[1]==='R'?W*.12:0);if(!best||score<best.s-1)best={c,y:yy,s:score};});
     const [ls,face,sc]=best.c, top=best.y, w=base*sc, h=hb*sc;
     const x0=lanes[ls[0]].x0, x1=lanes[ls[ls.length-1]].x1;
     const x=x0+Math.max(0,(x1-x0-w))*hash(s.id);
@@ -407,7 +407,7 @@ function build(){
     l.innerHTML='<img src="tape/'+s.id+'.png" alt="'+s.id+'" style="height:'+Math.max(14,W*.03)+'px;width:auto;display:block">';
     l.style.transform=`skewY(${F.skew}deg) scaleX(${F.sx})`;l.style.transformOrigin=face==='R'?'left center':'right center';
     pole.appendChild(l);
-    const next=top+h+LBL+W*(.05+.09*hash(s.id+'g'));
+    const next=top+h+LBL+W*(.025+.05*hash(s.id+'g'));
     ls.forEach(k=>ly[k]=next);
     y=Math.max(...ly);
   });
@@ -707,10 +707,8 @@ async function buildLeaflet(){
   const m=L.map('lmap',{zoomControl:true,attributionControl:true,worldCopyJump:true}).setView([13.75,100.5],5);
   // OpenStreetMap streets, turned into a dark grey map by a CSS filter (no key needed, goes down to single houses)
   // Esri dark grey canvas: sharp on retina screens, place and street names in English everywhere
-  const esri='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
-  L.tileLayer(esri+'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,detectRetina:true,
-    attribution:'Tiles © Esri · HERE · OpenStreetMap'}).addTo(m);
-  L.tileLayer(esri+'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,detectRetina:true,pane:'overlayPane'}).addTo(m);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'osm',
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
   const lab=()=>document.getElementById('lmap').classList.toggle('far',m.getZoom()<13); m.on('zoomend',lab);
   const pts=[];let noLoc=0;
   S.forEach((s,i)=>{
@@ -733,7 +731,7 @@ const modes={pole:document.getElementById('bPole'),map:document.getElementById('
 function setMode(m){Object.entries(modes).forEach(([k,b])=>b.classList.toggle('on',k===m));
   document.body.classList.toggle('idx',m==='index');document.body.classList.toggle('map',m==='map');
   idx.classList.toggle('on',m==='index');document.getElementById('map').classList.toggle('on',m==='map');
-  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt)buildLeaflet();}
+  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt){const gl=document.createElement('canvas').getContext('webgl2')||document.createElement('canvas').getContext('webgl');(gl?buildVector:buildLeaflet)();}}
 modes.pole.onclick=()=>setMode('pole');modes.map.onclick=()=>setMode('map');modes.index.onclick=()=>setMode('index');
 document.getElementById('submitBtn').onclick=()=>{document.getElementById('submitMsg').style.display='block'};
 function setCount(){const cs=new Set(S.map(s=>s.city).filter(c=>c!=='to be added')),ys=S.map(s=>s.year);
