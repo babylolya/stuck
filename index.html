@@ -147,6 +147,18 @@ body.map .years,body.map .proto{display:none}
 .flapw{position:absolute;right:0;bottom:0;width:var(--p,0px);height:var(--p,0px);filter:drop-shadow(-3px -3px 4px rgba(0,0,0,.55));pointer-events:none}
 .flap{position:absolute;inset:0;clip-path:polygon(0 0,100% 0,0 100%);background:linear-gradient(135deg,#9d998f 0%,#d9d5ca 55%,#f1eee6 100%)}
 .holder.lift{transition:--p .5s}
+/* street map */
+#lmap{position:absolute;left:0;right:0;top:150px;bottom:0;display:none;background:#0b0b0b}
+#map.leaf .mapStage{display:none}#map.leaf #lmap{display:block}
+.leaflet-container{background:#0b0b0b!important;font-family:var(--semi)!important}
+.leaflet-control-attribution{background:rgba(0,0,0,.6)!important;color:#555!important;font-size:8px!important}
+.leaflet-control-attribution a{color:#777!important}
+.leaflet-control-zoom a{background:#0b0b0b!important;color:#ecebe7!important;border-color:#2a2a2a!important;border-radius:0!important}
+.leaflet-bar{border:1px solid #2a2a2a!important;border-radius:0!important;box-shadow:none!important}
+.spin{position:relative}
+.spin i{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:#ecebe7;box-shadow:0 0 0 4px rgba(236,235,231,.18)}
+.spin span{position:absolute;left:10px;top:-7px;white-space:nowrap;font-size:9px;letter-spacing:.1em;color:#ecebe7;text-shadow:0 0 3px #000,0 0 3px #000}
+.coords a{color:inherit;text-decoration:none;border-bottom:1px solid #444}
 /* stickers */
 .st{position:absolute;z-index:2;cursor:pointer}
 .st .face{position:relative;width:100%;height:100%;overflow:hidden;
@@ -279,6 +291,7 @@ tr:hover td{background:#0d0d0d}
   <div class="mapHead"><h3>Map</h3><div class="sub" id="mapSub"></div></div>
   <div class="mapStage" id="mapStage"><svg id="mapSvg" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid meet"><g id="mapG"><g id="land"></g><g id="grat"></g><g id="pins"></g></g></svg>
     <div class="zoom"><button id="zIn">+</button><button id="zOut">−</button><button id="zFit">fit</button></div></div>
+  <div id="lmap"></div>
   <div class="sheet" id="sheet"><div class="sheetHead"><span id="sheetTitle"></span><button id="sheetClose">close</button></div><div class="grid" id="sheetGrid"></div></div>
 </div>
 
@@ -480,6 +493,7 @@ function onScroll(){
 window.addEventListener('scroll',onScroll,{passive:true});
 
 const card=document.getElementById('card'),holder=document.getElementById('holder');
+function fmtLL(a,b){return Math.abs(a).toFixed(5)+'° '+(a>=0?'N':'S')+', '+Math.abs(b).toFixed(5)+'° '+(b>=0?'E':'W');}
 function openCard(i){
   const s=S[i];const W=Math.min(window.innerWidth*.66,330);
   const ratio=s.img?s.ar:s.h/s.w, h=W*ratio;
@@ -499,7 +513,7 @@ function openCard(i){
       s.html.replace(/font-size:(\d+)px/g,(m,n)=>'font-size:'+(n*W/(s.w*520)).toFixed(1)+'px')+'</div></div></div><div class="side back"></div>';
   }
   document.getElementById('cId').textContent=s.title?s.title:s.id;
-  document.getElementById('cMeta').innerHTML=[['no.',s.id],['city',s.city+(s.country?', '+s.country:'')],['street',s.street],['peeled',s.date],['type',s.type],['size',s.cm?s.cm[0]+' × '+s.cm[1]+' cm':''],['underneath',s.under]].filter(r=>r[1])
+  document.getElementById('cMeta').innerHTML=[['no.',s.id],['city',s.city+(s.country?', '+s.country:'')],['location',(s.lat!=null&&s.lon!=null)?'<span class="coords"><a href="https://maps.google.com/?q='+s.lat+','+s.lon+'" target="_blank" rel="noopener">'+fmtLL(s.lat,s.lon)+'</a></span>':''],['peeled',s.date],['type',s.type],['size',s.cm?s.cm[0]+' × '+s.cm[1]+' cm':''],['underneath',s.under]].filter(r=>r[1])
     .map(r=>'<div><span>'+r[0]+'</span><span>'+r[1]+'</span></div>').join('');
   document.getElementById('cNote').innerHTML=s.note?'<span class="tape">'+s.note+'</span>':'';
   document.getElementById('cDetails').innerHTML=(s.details||[]).map((d,k)=>'<figure><img src="'+d+'" alt="detail" loading="lazy"><figcaption>'+s.id+' · detail 0'+(k+1)+'</figcaption></figure>').join('');
@@ -622,12 +636,38 @@ document.getElementById('sheetClose').onclick=()=>document.getElementById('sheet
   document.getElementById('zOut').onclick=()=>{const r=st.getBoundingClientRect();zoomAt(1/1.5,r.left+r.width/2,r.top+r.height/2);};
   document.getElementById('zFit').onclick=()=>fitTo(Object.keys(CITY).filter(c=>S.some(s=>s.city===c)).map(c=>P(...CITY[c])));
 })();
+// ---------- street map (Leaflet + dark CARTO tiles); the drawn world map stays as a fallback ----------
+function loadJS(u){return new Promise((ok,no)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=no;document.head.appendChild(e);});}
+function loadCSS(u){const l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);}
+async function buildLeaflet(){
+  mapBuilt=true;
+  try{ loadCSS('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'); await loadJS('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'); }
+  catch(e){ mapBuilt=false; return buildMap(); }
+  document.getElementById('map').classList.add('leaf');
+  const m=L.map('lmap',{zoomControl:true,attributionControl:true,worldCopyJump:true}).setView([13.75,100.5],5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd',
+    attribution:'© OpenStreetMap · © CARTO'}).addTo(m);
+  const pts=[];let noLoc=0;
+  S.forEach((s,i)=>{
+    let ll=(s.lat!=null&&s.lon!=null)?[s.lat,s.lon]:(CITY[s.city]||null);
+    if(!ll){noLoc++;return;}
+    // stickers from the same spot sit a few metres apart so each can be tapped
+    const same=pts.filter(p=>Math.abs(p[0]-ll[0])<1e-5&&Math.abs(p[1]-ll[1])<1e-5).length;
+    ll=[ll[0]+same*0.00004,ll[1]+same*0.00004]; pts.push(ll);
+    const mk=L.marker(ll,{icon:L.divIcon({className:'spin',html:'<i></i><span>'+(s.title||s.id)+'</span>',iconSize:[0,0]})}).addTo(m);
+    mk.on('click',()=>openCard(i));
+  });
+  const cities=new Set(S.map(s=>s.city).filter(c=>c&&c!=='to be added'));
+  document.getElementById('mapSub').textContent=cities.size+(cities.size===1?' city':' cities')+' · '+pts.length+' stickers'+(noLoc?' · '+noLoc+' without location':'');
+  if(pts.length)m.fitBounds(pts,{padding:[60,60],maxZoom:12});
+  setTimeout(()=>m.invalidateSize(),100);
+}
 // ---------- modes ----------
 const modes={pole:document.getElementById('bPole'),map:document.getElementById('bMap'),index:document.getElementById('bIndex')};
 function setMode(m){Object.entries(modes).forEach(([k,b])=>b.classList.toggle('on',k===m));
   document.body.classList.toggle('idx',m==='index');document.body.classList.toggle('map',m==='map');
   idx.classList.toggle('on',m==='index');document.getElementById('map').classList.toggle('on',m==='map');
-  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt)buildMap();}
+  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt)buildLeaflet();}
 modes.pole.onclick=()=>setMode('pole');modes.map.onclick=()=>setMode('map');modes.index.onclick=()=>setMode('index');
 document.getElementById('submitBtn').onclick=()=>{document.getElementById('submitMsg').style.display='block'};
 function setCount(){const cs=new Set(S.map(s=>s.city).filter(c=>c!=='to be added')),ys=S.map(s=>s.year);
