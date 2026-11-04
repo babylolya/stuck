@@ -1,5 +1,30 @@
 [
  {
+  "id": "STK-0003",
+  "city": "Pattaya City",
+  "street": "ถนนหาดตาแหวน",
+  "country": "Thailand",
+  "lat": 12.92403,
+  "lon": 100.77778,
+  "date": "22.09.2026",
+  "year": 2026,
+  "type": "Other",
+  "under": "",
+  "note": "Ko Larn Island / Table tag",
+  "face": "L",
+  "w": 0.47,
+  "ar": 0.517,
+  "x": 0.17,
+  "rot": 1.3,
+  "img": "items/0003-front.webp",
+  "details": [
+   "items/0003-detail1.webp",
+   "items/0003-detail2.webp"
+  ],
+  "back": "items/0003-back.webp",
+  "backAr": 0.513
+ },
+ {
   "id": "STK-0002",
   "city": "to be added",
   "street": "to be added",
