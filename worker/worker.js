@@ -172,7 +172,8 @@ async function handle(u, env) {
 async function askType(env, chat, st) {
   st.step = "type"; await putState(env, chat, st);
   const rows = []; for (let i = 0; i < TYPES.length; i += 3) rows.push(TYPES.slice(i, i + 3).map(t => [t, "t:" + t]));
-  return send(env, chat, "Что это за стикер? Выбери или напиши своё слово.", kb(rows));
+  rows.push([["Пропустить", "t:Other"]]);
+  return send(env, chat, "Тема стикера (по ней можно фильтровать архив): реклама, музыка, пропажа и т.д. Выбери, напиши своё слово или пропусти.", kb(rows));
 }
 
 function today() {
