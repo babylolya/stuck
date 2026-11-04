@@ -1,0 +1,22 @@
+{
+ "city": "Bangkok",
+ "street": "Prawet District",
+ "country": "Thailand",
+ "lat": 13.6948,
+ "lon": 100.65075,
+ "date": "27.06.2026",
+ "type": "Other",
+ "note": "Founded: Night Market Srinakarin entrance",
+ "title": "",
+ "cm": [
+  5,
+  5
+ ],
+ "chat": 8550267763,
+ "files": [
+  "front.heic",
+  "detail1.heic",
+  "detail2.heic",
+  "detail3.heic"
+ ]
+}
