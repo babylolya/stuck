@@ -140,7 +140,10 @@ async function handle(u, env) {
     case "placetext": {
       if (!msg?.text) return;
       const [c, ...rest] = msg.text.split(",");
-      st.city = c.trim(); if (rest.length) st.street = rest.join(",").trim();
+      const g = await geocodeCity(msg.text) || await geocodeCity(c);
+      if (g) Object.assign(st, g); else st.city = c.trim();
+      if (rest.length) st.street = rest.join(",").trim();
+      await send(env, chat, `Записала: ${st.city}${st.country ? ", " + st.country : ""}${rest.length ? " · " + st.street : ""}`);
       return askType(env, chat, st);
     }
 
@@ -197,9 +200,9 @@ function parseCm(t) {
 }
 
 // ---------- edit menu ----------
-const FIELDS = [["title", "Название"], ["city", "Город"], ["street", "Улица"], ["country", "Страна"], ["date", "Дата"], ["type", "Тема"],
+const FIELDS = [["title", "Название"], ["city", "Город"], ["street", "Улица"], ["date", "Дата"], ["type", "Тема"],
   ["cm", "Размер"], ["note", "Заметка"], ["under", "Что было под ним"]];
-const HINT = { title: "Напиши название", city: "Напиши город", street: "Напиши улицу или район", country: "Напиши страну",
+const HINT = { title: "Напиши название", city: "Напиши город (можно по-русски), страна и точка на карте подставятся сами", street: "Напиши улицу или район", country: "Напиши страну",
   date: "Дата: ДД.ММ.ГГГГ", type: "Тема одним словом: Music, Ads, Lost…", cm: "Размер: ширина x высота в см, например 4x2",
   note: "Одна фраза по-английски для карточки", under: "Что было под стикером, когда ты его сняла (по-английски)" };
 
@@ -253,9 +256,10 @@ async function editSave(env, chat, st, value) {
     if (!m) return send(env, chat, HINT.date);
     v = `${m[1].padStart(2, "0")}.${m[2].padStart(2, "0")}.${m[3]}`;
   }
+  const g = st.field === "city" && v ? await geocodeCity(v) : null;
   await saveItems(env, items => items.map(it => {
     if (it.id !== st.id) return it;
-    const n = { ...it, [st.field]: v };
+    const n = { ...it, [st.field]: v, ...(g || {}) };
     if (st.field === "date" && v) n.year = +v.slice(-4);
     return n;
   }), `archive: ${st.id} ${st.field}`);
@@ -300,6 +304,21 @@ async function fromGoogleLink(text) {
     } catch {}
   }
   return null;
+}
+
+// city typed by hand (any language) -> English name, country and a point for the map
+async function geocodeCity(q) {
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&accept-language=en&q=" + encodeURIComponent(q.trim()),
+      { headers: { "User-Agent": "stuck-archive-bot/1.0" } });
+    const j = (await r.json())[0];
+    if (!j) return null;
+    const a = j.address || {};
+    return {
+      city: a.city || a.town || a.village || a.island || a.municipality || a.county || a.state || j.name,
+      country: a.country || "", lat: +(+j.lat).toFixed(5), lon: +(+j.lon).toFixed(5),
+    };
+  } catch { return null; }
 }
 
 async function geocode(lat, lon) {
