@@ -14,14 +14,14 @@
   "face": "L",
   "title": "FIND NO DRIPS",
   "cm": [
-   8,
-   10
+   10,
+   8
   ],
   "w": 0.43,
-  "ar": 0.651,
+  "ar": 0.689,
   "x": 0.16,
   "rot": 0.3,
-  "img": "items/0007-front.webp",
+  "img": "items/0007-front-798484.webp",
   "details": [
    "items/0007-detail1.webp",
    "items/0007-detail2.webp"
