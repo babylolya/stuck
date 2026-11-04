@@ -24,7 +24,7 @@ body::after{content:"";position:fixed;inset:-50%;z-index:90;pointer-events:none;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
 
 /* header */
-header{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;align-items:flex-start;padding:14px 4vw 26px;background:linear-gradient(#000000e6,#00000000)}
+header{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 4vw 10px;background:#000;border-bottom:1px solid #1c1c1c}
 .logo{font-family:var(--semi);font-size:10px;letter-spacing:.2em;line-height:1}
 .logo small{display:block;font-family:var(--semi);font-size:8px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-top:5px}
 .toggle{display:flex;gap:2px;font-family:var(--semi);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
@@ -706,9 +706,12 @@ async function buildLeaflet(){
   document.getElementById('map').classList.add('leaf');
   const m=L.map('lmap',{zoomControl:true,attributionControl:true,worldCopyJump:true}).setView([13.75,100.5],5);
   // OpenStreetMap streets, turned into a dark grey map by a CSS filter (no key needed, goes down to single houses)
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'osm',
-    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
-  const lab=()=>document.getElementById('lmap').classList.toggle('far',m.getZoom()<14); m.on('zoomend',lab);
+  // Esri dark grey canvas: sharp on retina screens, place and street names in English everywhere
+  const esri='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+  L.tileLayer(esri+'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,detectRetina:true,
+    attribution:'Tiles © Esri · HERE · OpenStreetMap'}).addTo(m);
+  L.tileLayer(esri+'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,detectRetina:true,pane:'overlayPane'}).addTo(m);
+  const lab=()=>document.getElementById('lmap').classList.toggle('far',m.getZoom()<13); m.on('zoomend',lab);
   const pts=[];let noLoc=0;
   S.forEach((s,i)=>{
     let ll=(s.lat!=null&&s.lon!=null)?[s.lat,s.lon]:(CITY[s.city]||null);
@@ -730,7 +733,7 @@ const modes={pole:document.getElementById('bPole'),map:document.getElementById('
 function setMode(m){Object.entries(modes).forEach(([k,b])=>b.classList.toggle('on',k===m));
   document.body.classList.toggle('idx',m==='index');document.body.classList.toggle('map',m==='map');
   idx.classList.toggle('on',m==='index');document.getElementById('map').classList.toggle('on',m==='map');
-  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt)buildVector();}
+  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt)buildLeaflet();}
 modes.pole.onclick=()=>setMode('pole');modes.map.onclick=()=>setMode('map');modes.index.onclick=()=>setMode('index');
 document.getElementById('submitBtn').onclick=()=>{document.getElementById('submitMsg').style.display='block'};
 function setCount(){const cs=new Set(S.map(s=>s.city).filter(c=>c!=='to be added')),ys=S.map(s=>s.year);
