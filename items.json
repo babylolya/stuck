@@ -20,7 +20,7 @@
   "w": 0.52,
   "ar": 1.236,
   "x": 0.08,
-  "rot": -1.0,
+  "rot": -1,
   "img": "items/0004-front.webp",
   "details": [
    "items/0004-detail1.webp",
@@ -65,7 +65,7 @@
   "lat": null,
   "lon": null,
   "year": 2026,
-  "date": "to be added",
+  "date": "21.06.2026",
   "type": "Name tag",
   "face": "L",
   "under": "Paper tape and dry roots. The pole kept part of it.",
