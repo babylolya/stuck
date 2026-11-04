@@ -44,6 +44,36 @@ def mask_grabcut(im):
     return cv2.resize(m, (w, h), interpolation=cv2.INTER_NEAREST)
 
 
+def border_quad(im):
+    """outline of a rectangular sticker found from colour difference with the photo edges"""
+    m = mask_border_all(im)
+    cs, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    tot = m.shape[0] * m.shape[1]
+    cs = [c for c in cs if cv2.contourArea(c) > tot * .01]
+    if not cs: return None
+    hull = cv2.convexHull(np.vstack(cs)); peri = cv2.arcLength(hull, True)
+    for eps in np.linspace(.01, .06, 26):
+        ap = cv2.approxPolyDP(hull, eps * peri, True)
+        if len(ap) == 4:
+            q = ap.reshape(-1, 2).astype(np.float32)
+            if cv2.contourArea(hull) / max(1, cv2.contourArea(q)) > .95 and cv2.contourArea(q) < tot * .97:
+                return q
+    return None
+
+def mask_border_all(im):
+    a = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2LAB).astype(np.float32)
+    h, w = a.shape[:2]; sc = 800 / max(h, w)
+    s = cv2.GaussianBlur(cv2.resize(a, (int(w * sc), int(h * sc)), interpolation=cv2.INTER_AREA), (5, 5), 0)
+    H, W = s.shape[:2]; b = max(4, int(min(H, W) * .02))
+    border = np.concatenate([s[:b].reshape(-1, 3), s[-b:].reshape(-1, 3), s[:, :b].reshape(-1, 3), s[:, -b:].reshape(-1, 3)])
+    _, _, cent = cv2.kmeans(border, 5, None, (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, .5), 3, cv2.KMEANS_PP_CENTERS)
+    d = np.min(np.stack([np.linalg.norm(s - c, axis=2) for c in cent]), axis=0)
+    m = (d > 18).astype(np.uint8) * 255
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+    return cv2.resize(m, (w, h), interpolation=cv2.INTER_NEAREST)
+
+
 def biggest(m):
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
     cs, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -92,6 +122,11 @@ def cut(path, prefer_rect=None):
         if c2 is not None and (c is None or quad_of(c2) is not None):
             m, c = m2, c2
     q = quad_of(c)
+    # the network sometimes picks a picture printed ON the sticker (a bird, a face) instead of the sticker itself.
+    # If the colour difference from the table finds a clearly bigger rectangle around it, that rectangle is the sticker.
+    qb = border_quad(im)
+    if qb is not None and cv2.contourArea(qb) > 1.25 * cv2.contourArea(c) and cv2.contourArea(qb) > .08 * im.width * im.height:
+        q = order(qb)
     out = warp(im, q) if q is not None else freeform(im, c, m)
     if out.width > OUT_W:
         out = out.resize((OUT_W, round(out.height * OUT_W / out.width)), Image.LANCZOS)
