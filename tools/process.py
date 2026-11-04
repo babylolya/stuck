@@ -103,12 +103,39 @@ def next_number(items):
     return max(n, default=0) + 1
 
 
+def replace_photo(items, d, meta, done):
+    """new photo for a sticker that is already in the archive"""
+    it = next((i for i in items if i["id"] == meta["replace"]), None)
+    if not it:
+        print("no such sticker", meta["replace"]); return
+    num = re.sub(r"\D", "", it["id"]).zfill(4)
+    which, f = meta["which"], d / meta["files"][0]
+    stamp = d.name.lstrip("r")[-6:]          # new file name, so phones do not show the old cached photo
+    if which == "detail":
+        im = load(f); im.thumbnail((1100, 1100))
+        p = f"items/{num}-detail{len(it.get('details', [])) + 1}-{stamp}.webp"; im.save(ROOT / p, quality=84)
+        it.setdefault("details", []).append(p)
+    else:
+        out, _ = cut(f, prefer_rect=(which == "back") or None)
+        p = f"items/{num}-{which}-{stamp}.webp"; out.save(ROOT / p, quality=88)
+        if which == "front":
+            it["img"] = p; it["ar"] = round(out.height / out.width, 3)
+        else:
+            it["back"] = p; it["backAr"] = round(out.height / out.width, 3)
+    done.append({"id": it["id"], "chat": meta.get("chat"), "text": "обновлён"})
+    print("replaced", which, it["id"])
+
+
 def main():
     items_path = ROOT / "items.json"
     items = json.loads(items_path.read_text()) if items_path.exists() else []
     done = []
     for d in sorted(p for p in INBOX.glob("*") if p.is_dir()) if INBOX.exists() else []:
         meta = json.loads((d / "meta.json").read_text())
+        if meta.get("replace"):
+            replace_photo(items, d, meta, done)
+            shutil.rmtree(d)
+            continue
         num = next_number(items); sid = f"STK-{num:04d}"; base = f"items/{num:04d}"
         files = meta["files"]
         front_f = next(f for f in files if f.startswith("front"))

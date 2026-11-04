@@ -142,6 +142,11 @@ body.map .years,body.map .proto{display:none}
 .dec.rs{opacity:.9;filter:sepia(.25) brightness(.95) drop-shadow(0 1px 1px rgba(0,0,0,.45))}
 .glueback{position:absolute;inset:0;transform:scaleX(-1);-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat;
   background:radial-gradient(circle at 30% 40%,rgba(255,255,255,.18) 0 6px,transparent 7px) 0 0/23px 19px,radial-gradient(circle at 70% 60%,rgba(0,0,0,.28) 0 3px,transparent 4px) 0 0/17px 21px,linear-gradient(160deg,#e4e1d8,#bdb9ae);box-shadow:inset 0 0 18px rgba(0,0,0,.25)}
+/* card: a sticker with no back photo only lifts at the corner */
+.pw{position:absolute;inset:0;clip-path:polygon(0 0,100% 0,100% calc(100% - var(--p,0px)),calc(100% - var(--p,0px)) 100%,0 100%)}
+.flapw{position:absolute;right:0;bottom:0;width:var(--p,0px);height:var(--p,0px);filter:drop-shadow(-3px -3px 4px rgba(0,0,0,.55));pointer-events:none}
+.flap{position:absolute;inset:0;clip-path:polygon(0 0,100% 0,0 100%);background:linear-gradient(135deg,#9d998f 0%,#d9d5ca 55%,#f1eee6 100%)}
+.holder.lift{transition:--p .5s}
 /* stickers */
 .st{position:absolute;z-index:2;cursor:pointer}
 .st .face{position:relative;width:100%;height:100%;overflow:hidden;
@@ -282,7 +287,7 @@ tr:hover td{background:#0d0d0d}
   <div class="cardIn">
     <div class="stage"><div class="holder" id="holder"></div><div class="ruler"></div></div>
     <div class="cardId" id="cId"></div>
-    <button class="btn" id="flipBtn" style="margin:6px 0 14px">peel · see the back</button><span style="color:var(--dim);font-size:10px;margin-left:10px">or swipe the sticker</span>
+    <button class="btn" id="flipBtn" style="margin:6px 0 14px">peel · see the back</button><span id="flipHint" style="color:var(--dim);font-size:10px;margin-left:10px">or swipe the sticker</span>
     <div class="meta2" id="cMeta"></div>
     <div class="note" id="cNote"></div>
     <div class="details" id="cDetails"></div>
@@ -479,7 +484,13 @@ function openCard(i){
   const s=S[i];const W=Math.min(window.innerWidth*.66,330);
   const ratio=s.img?s.ar:s.h/s.w, h=W*ratio;
   holder.className='holder';ang=0;setAng(0,false);holder.style.width=W+'px';holder.style.height=h+'px';
-  if(s.img){
+  canFlip=!s.img||!!s.back; setPeel(canFlip?0:.05,false); document.querySelector('.stage').style.touchAction=canFlip?'pan-y':'none';
+  document.getElementById('flipBtn').style.display=canFlip?'':'none';
+  document.getElementById('flipHint').textContent=canFlip?'or swipe the sticker':'no back photo · pull the corner';
+  document.getElementById('flipHint').style.marginLeft=canFlip?'10px':'0';
+  if(s.img&&!s.back){
+    holder.innerHTML='<div class="side"><div class="pw"><img src="'+s.img+'" style="width:100%;height:100%;display:block"></div><div class="flapw"><div class="flap"></div></div></div>';
+  } else if(s.img){
     holder.innerHTML='<div class="side"><img src="'+s.img+'" style="width:100%;height:100%;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.7))"></div>'+
       (s.back?'<div class="side" style="transform:rotateY(180deg);background:none;box-shadow:none"><img src="'+s.back+'" style="width:100%;height:100%;object-fit:fill;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.7))"></div>'
       :'<div class="side" style="transform:rotateY(180deg)"><div class="glueback" style="--m:url('+s.img+')"></div></div>');
@@ -494,15 +505,25 @@ function openCard(i){
   document.getElementById('cDetails').innerHTML=(s.details||[]).map((d,k)=>'<figure><img src="'+d+'" alt="detail" loading="lazy"><figcaption>'+s.id+' · detail 0'+(k+1)+'</figcaption></figure>').join('');
   card.classList.add('on');card.scrollTop=0;
 }
-let ang=0;
+let ang=0,canFlip=true,peel=0;
+function setPeel(p,anim){peel=p;const W=parseFloat(holder.style.width)||300;
+  if(anim){const from=parseFloat(holder.style.getPropertyValue('--p'))||0,to=p*W,t0=performance.now();
+    const step=t=>{const k=Math.min(1,(t-t0)/450),e=1-Math.pow(1-k,3);holder.style.setProperty('--p',(from+(to-from)*e)+'px');if(k<1)requestAnimationFrame(step);};requestAnimationFrame(step);}
+  else holder.style.setProperty('--p',(p*W)+'px');}
 function setAng(a,anim){holder.style.transition=anim?'transform .6s cubic-bezier(.2,.7,.2,1)':'none';holder.style.transform='rotateY('+a+'deg)';}
 document.getElementById('flipBtn').onclick=()=>{ang=Math.round(ang/180)*180+180;setAng(ang,true);};
 (function(){const st=document.querySelector('.stage');let sx=null,base=0,lx=0,lt=0,v=0;
   st.style.touchAction='pan-y';
-  st.addEventListener('pointerdown',e=>{sx=e.clientX;base=ang;lx=e.clientX;lt=performance.now();v=0;st.setPointerCapture(e.pointerId);});
-  st.addEventListener('pointermove',e=>{if(sx===null)return;const now=performance.now();v=(e.clientX-lx)/Math.max(1,now-lt);lx=e.clientX;lt=now;
+  let sy=0;
+  st.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;base=ang;lx=e.clientX;lt=performance.now();v=0;st.setPointerCapture(e.pointerId);});
+  st.addEventListener('pointermove',e=>{if(sx===null)return;
+    if(!canFlip){const W=parseFloat(holder.style.width)||300;const d=((sx-e.clientX)+(sy-e.clientY))/2;
+      const p=Math.max(0,d)/W; setPeel(Math.min(.3,.05+p*.9),false); return;}
+    const now=performance.now();v=(e.clientX-lx)/Math.max(1,now-lt);lx=e.clientX;lt=now;
     ang=base+(e.clientX-sx)*0.55;setAng(ang,false);});
-  const end=()=>{if(sx===null)return;sx=null;let target=Math.round((ang+v*120)/180)*180;ang=target;setAng(ang,true);};
+  const end=()=>{if(sx===null)return;sx=null;
+    if(!canFlip){setPeel(.05,true);return;}
+    let target=Math.round((ang+v*120)/180)*180;ang=target;setAng(ang,true);};
   st.addEventListener('pointerup',end);st.addEventListener('pointercancel',end);
 })();
 document.getElementById('closeCard').onclick=()=>card.classList.remove('on');

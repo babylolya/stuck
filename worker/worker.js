@@ -89,6 +89,20 @@ async function handle(u, env) {
   if (data?.startsWith("del:")) return send(env, chat, "Точно удалить " + data.slice(4) + " из архива?", kb([[["Да, удалить", "delok:" + data.slice(4)], ["Нет", "e:" + data.slice(4)]]]));
   if (data?.startsWith("delok:")) { await saveItems(env, items => items.filter(i => i.id !== data.slice(6)), "archive: remove " + data.slice(6)); await dropState(env, chat); return send(env, chat, data.slice(6) + " удалён. Сайт обновится через минуту.", kb([[["К списку", "edit"]]])); }
   if (st?.step === "edit" && msg?.text) return editSave(env, chat, st, msg.text.trim());
+  if (data?.startsWith("ph:")) {
+    const [, id, which] = data.split(":");
+    await putState(env, chat, { step: "editphoto", id, which });
+    const what = { front: "лицевой стороны", back: "оборота", detail: "макро (одно фото)" }[which];
+    return send(env, chat, `${id}: пришли новое фото ${what}. Лучше файлом. Фон обрежется сам.`, kb([[["Отмена", "e:" + id]]]));
+  }
+  if (st?.step === "editphoto" && msg && fileOf(msg)) {
+    const f = fileOf(msg);
+    await send(env, chat, "Загружаю…");
+    await commitFiles(env, "inbox/r" + Date.now(), [[st.which + "." + f.ext, f]],
+      { replace: st.id, which: st.which, chat, files: [st.which + "." + f.ext] }, `inbox: ${st.id} new ${st.which} photo`);
+    await dropState(env, chat);
+    return send(env, chat, "Принято. Обрежу фон и обновлю " + st.id + " за 2–4 минуты, пришлю ссылку.");
+  }
 
   if (msg?.text === "/new" || data === "new" || (!st && msg && fileOf(msg))) {
     st = { step: "front", details: [], date: today() };
@@ -238,6 +252,8 @@ async function editOpen(env, chat, id) {
   const text = it.id + "\n\n" + FIELDS.map(([k, n]) => `${n}: ${show(it[k])}`).join("\n") + "\n\nЧто поменять?";
   const btn = FIELDS.map(([k, n]) => [n, `f:${id}:${k}`]);
   const rows = []; for (let i = 0; i < btn.length; i += 3) rows.push(btn.slice(i, i + 3));
+  rows.push([["Заменить фото лица", "ph:" + id + ":front"], [it.back ? "Заменить оборот" : "Добавить оборот", "ph:" + id + ":back"]]);
+  rows.push([["Добавить макро", "ph:" + id + ":detail"]]);
   rows.push([["Удалить стикер", "del:" + id], ["К списку", "edit"]]);
   return send(env, chat, text, kb(rows));
 }
@@ -355,26 +371,27 @@ async function download(env, f) {
   return r.arrayBuffer();
 }
 async function commitToGitHub(env, st, chat) {
-  const dir = "inbox/" + Date.now();
   const files = [["front." + st.front.ext, st.front]];
   if (st.back) files.push(["back." + st.back.ext, st.back]);
   st.details.forEach((d, i) => files.push([`detail${i + 1}.${d.ext}`, d]));
-
-  const tree = [];
-  for (const [name, f] of files) {
-    const blob = await gh(env, "/git/blobs", "POST", { content: b64(await download(env, f)), encoding: "base64" });
-    tree.push({ path: `${dir}/${name}`, mode: "100644", type: "blob", sha: blob.sha });
-  }
   const meta = {
     city: st.city, street: st.street, country: st.country || "", lat: st.lat ?? null, lon: st.lon ?? null,
     date: st.date, type: st.type || "Other", note: st.note || "", title: st.title || "", cm: st.cm || null, chat,
     files: files.map(([n]) => n),
   };
+  return commitFiles(env, "inbox/" + Date.now(), files, meta, `inbox: ${st.city} ${st.date}`);
+}
+async function commitFiles(env, dir, files, meta, message) {
+  const tree = [];
+  for (const [name, f] of files) {
+    const blob = await gh(env, "/git/blobs", "POST", { content: b64(await download(env, f)), encoding: "base64" });
+    tree.push({ path: `${dir}/${name}`, mode: "100644", type: "blob", sha: blob.sha });
+  }
   tree.push({ path: `${dir}/meta.json`, mode: "100644", type: "blob", content: JSON.stringify(meta, null, 1) });
 
   const ref = await gh(env, "/git/ref/heads/main");
   const head = await gh(env, "/git/commits/" + ref.object.sha);
   const t = await gh(env, "/git/trees", "POST", { base_tree: head.tree.sha, tree });
-  const c = await gh(env, "/git/commits", "POST", { message: `inbox: ${st.city} ${st.date}`, tree: t.sha, parents: [ref.object.sha] });
+  const c = await gh(env, "/git/commits", "POST", { message, tree: t.sha, parents: [ref.object.sha] });
   await gh(env, "/git/refs/heads/main", "PATCH", { sha: c.sha });
 }
