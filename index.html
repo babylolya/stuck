@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STUCK · Prototype</title>
+<style>
+:root{}
+@font-face{font-family:'OEb';src:url('fonts/ob.woff') format('woff');font-weight:700;font-display:swap}
+@font-face{font-family:'OEm';src:url('fonts/om.woff') format('woff');font-weight:500;font-display:swap}
+@font-face{font-family:'OEs';src:url('fonts/os.woff') format('woff');font-weight:600;font-display:swap}
+:root{
+  --ink:#ecebe7; --dim:#77746e; --bg:#000;
+  --type:'OEm','Helvetica Neue',Helvetica,Arial,sans-serif;
+  --semi:'OEs','Helvetica Neue',Helvetica,Arial,sans-serif;
+  --grot:'OEb','Helvetica Neue',Helvetica,Arial,sans-serif;
+  --edge:.73; /* where the pole's corner sits, as share of width */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--type);font-size:12px;overflow-x:hidden;font-feature-settings:'tnum','cv11';-webkit-font-smoothing:antialiased}
+/* photocopy grain over everything */
+body::after{content:"";position:fixed;inset:-50%;z-index:90;pointer-events:none;opacity:.07;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
+
+/* header */
+header{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;align-items:flex-start;padding:14px 4vw 26px;background:linear-gradient(#000000e6,#00000000)}
+.logo{font-family:var(--semi);font-size:10px;letter-spacing:.2em;line-height:1}
+.logo small{display:block;font-family:var(--semi);font-size:8px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-top:5px}
+.toggle{display:flex;gap:2px;font-family:var(--semi);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.toggle button{text-transform:uppercase;letter-spacing:.06em;background:none;border:1px solid transparent;border-radius:99px;color:var(--dim);font:inherit;cursor:pointer;padding:3px 9px 3px}
+.toggle button.on{color:var(--ink);border-color:transparent}
+.toggle button.on::before{content:'[ '}.toggle button.on::after{content:' ]'}
+.toggle button{font-size:9px!important;padding:3px 4px!important}
+
+/* tape label: text printed on a strip of tape */
+.tape{display:inline-block;position:relative;padding:3px 9px 4px;margin:3px 0;color:#0b0b0b;
+  font-family:var(--grot);font-weight:500;line-height:1.05;
+  background:linear-gradient(180deg,rgba(225,222,212,.86),rgba(205,201,190,.82));
+  box-shadow:0 1px 2px rgba(0,0,0,.5);
+  clip-path:polygon(0 4%,3% 0,98% 6%,100% 92%,96% 100%,2% 95%)}
+.tape.type{font-family:var(--type);font-weight:400}
+
+/* pole fills the screen, small margins */
+.poleWrap{position:relative;padding:0 3.5vw}
+.pole{position:relative;width:100%;max-width:980px;margin:0 auto;
+  background-image:url('pole_tile.jpg');background-size:100% auto;background-repeat:repeat-y}
+.pole::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:linear-gradient(90deg,rgba(0,0,0,.75) 0%,rgba(0,0,0,.15) 7%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 70%,rgba(0,0,0,.25) 73%,rgba(0,0,0,.42) 78%,rgba(0,0,0,.55) 93%,rgba(0,0,0,.85) 100%)}
+.pole::after{content:"";position:absolute;left:0;right:0;bottom:0;height:320px;pointer-events:none;z-index:4;background:linear-gradient(transparent,#000)}
+
+/* darkened top of the pole with the intro on it */
+.top{position:absolute;left:0;right:0;top:0;height:100vh;z-index:5;justify-content:flex-end!important;padding-bottom:21vh!important;
+  background:linear-gradient(180deg,rgba(0,0,0,.96) 0%,rgba(0,0,0,.88) 45%,rgba(0,0,0,.4) 80%,rgba(0,0,0,0) 100%);
+  display:flex;flex-direction:column;justify-content:center;padding:0 7%;pointer-events:none}
+.top h1{position:relative;font-family:var(--grot);font-weight:700;font-size:clamp(58px,19vw,170px);line-height:.8;letter-spacing:-.05em;margin:0 0 26px 3%;color:#e4e1da;text-shadow:0 0 1px rgba(228,225,218,.5)}
+.top h1 .ov{position:absolute;left:.06em;top:.34em;color:transparent;-webkit-text-stroke:1px rgba(236,235,231,.32);pointer-events:none}
+.top h1 .ov2{position:absolute;left:-.02em;top:.02em;color:rgba(236,235,231,.10);transform:translate(3px,-2px);pointer-events:none;mix-blend-mode:screen}
+.top .lines{max-width:620px;margin-left:4%}
+.no{font-family:var(--semi);font-size:8.5px;letter-spacing:.18em;color:#a8a49c;margin:0 0 22px 4%}
+.tp{display:block;height:auto;margin:-2px 0;max-width:none;filter:brightness(.9) contrast(1.02)}
+.sig{margin:26px 0 0 4%;font-family:var(--semi);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:#a8a49c;line-height:1.9}
+.code{position:absolute;top:84px;left:7%;font-family:var(--semi);font-size:8.5px;letter-spacing:.1em;color:#8d8a84}
+.code.r{left:auto;right:7%;text-align:right}
+.xh,.xv{position:absolute;background:rgba(236,235,231,.16)}
+.xh{left:0;right:0;top:104px;height:1px}
+.xv{top:0;bottom:0;left:calc(var(--edge)*100%);width:1px;background:linear-gradient(rgba(236,235,231,.18),rgba(236,235,231,.18) 70%,transparent)}
+.reg{position:absolute;width:14px;height:14px}
+.reg::before,.reg::after{content:"";position:absolute;background:rgba(236,235,231,.55)}
+.reg::before{left:6.5px;top:0;width:1px;height:14px}.reg::after{top:6.5px;left:0;height:1px;width:14px}
+.reg i{position:absolute;inset:3px;border:1px solid rgba(236,235,231,.55);border-radius:50%}
+.sheetR{margin-top:34px;margin-left:auto;text-align:right;font-family:var(--grot);font-weight:700;font-size:clamp(13px,3.9vw,22px);line-height:1.08;letter-spacing:-.01em;text-transform:uppercase}
+.sheetR .s{font-family:var(--semi);font-size:8.5px;letter-spacing:.12em;color:#8d8a84;margin-bottom:6px}
+.sheetR .d{color:#8d8a84}
+.pill{display:inline-block;border:1.2px solid currentColor;border-radius:99px;padding:0 .38em .04em;line-height:1.02}
+.sheetR .pill{margin-top:2px}
+.top .meta{display:none}
+
+
+/* street details on the pole */
+.band{position:absolute;left:0;right:0;z-index:2;pointer-events:none}
+.band i{position:absolute;top:0;bottom:0}
+.band .bl{left:0;width:calc(var(--edge)*100%);transform:skewY(-2deg);transform-origin:right center;
+  background:linear-gradient(180deg,#1a1b1d 0,#55585c 18%,#2b2d30 40%,#121314 60%,#3b3e42 82%,#0d0d0e 100%);box-shadow:0 6px 10px rgba(0,0,0,.6)}
+.band .br{right:0;width:calc((1 - var(--edge))*100%);transform:skewY(-4deg);transform-origin:left center;filter:brightness(.6);
+  background:linear-gradient(180deg,#1a1b1d 0,#55585c 18%,#2b2d30 40%,#121314 60%,#3b3e42 82%,#0d0d0e 100%);box-shadow:0 6px 10px rgba(0,0,0,.6)}
+.band .bl::after,.band .br::after{content:"";position:absolute;inset:0;background:url('pole_tile.jpg') center/200px auto;mix-blend-mode:overlay;opacity:.5}
+.bolt{position:absolute;width:16px;height:16px;border-radius:3px;z-index:3;
+  background:radial-gradient(circle at 35% 30%,#8c9094,#3a3c3f 55%,#111 100%);box-shadow:0 2px 3px rgba(0,0,0,.7)}
+.rust{position:absolute;z-index:1;width:10px;pointer-events:none;mix-blend-mode:multiply;opacity:.75;
+  background:linear-gradient(180deg,rgba(120,60,25,.9),rgba(120,60,25,.35) 60%,transparent)}
+.plate{position:absolute;z-index:2;background:#7a1f1a;color:#efe9e2;font-family:var(--grot);font-weight:700;letter-spacing:-.01em;
+  text-align:center;line-height:1.02;padding:.35em .45em;box-shadow:0 2px 5px rgba(0,0,0,.6);transform-origin:right center}
+.plate::after{content:"";position:absolute;inset:0;background:url('pole_tile.jpg') center/220px auto;mix-blend-mode:multiply;opacity:.45}
+.residue{position:absolute;z-index:1;pointer-events:none;background:rgba(214,208,194,.38);mix-blend-mode:screen;
+  clip-path:polygon(3% 10%,30% 0,55% 8%,80% 2%,100% 22%,94% 60%,100% 88%,70% 100%,40% 92%,12% 100%,0 70%)}
+.glue{position:absolute;z-index:1;pointer-events:none;border-radius:40%;background:radial-gradient(ellipse,rgba(255,250,235,.16),rgba(255,250,235,.04) 60%,transparent 70%)}
+.pole .grain{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.22;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='3'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 1.6 -.3'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>")}
+
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px 14px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(5,1fr)}}
+.cell{cursor:pointer}
+.cell .ic{aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#0b0b0b;position:relative;overflow:hidden}
+.cell .ic img{max-width:84%;max-height:84%;filter:drop-shadow(0 3px 6px rgba(0,0,0,.7))}
+.cell .ic .mini{width:76%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px;box-shadow:0 3px 6px rgba(0,0,0,.7);overflow:hidden}
+.cell .id{font-family:var(--grot);font-size:11px;margin-top:7px;letter-spacing:-.01em}
+.cell .ct{font-size:9px;color:var(--dim)}
+.cell:active .ic{background:#151515}
+body.idx .years,body.idx .proto{display:none}
+
+
+#map{position:fixed;inset:0;z-index:40;background:#000;display:none;padding:76px 0 0}
+#map.on{display:block}
+.mapHead{padding:0 4vw}
+.mapHead h3{font-family:var(--grot);font-weight:700;font-size:22px;line-height:1;letter-spacing:-.02em}
+.mapHead .sub{color:var(--dim);margin:6px 0 10px}
+.mapStage{position:absolute;left:0;right:0;top:150px;bottom:0;touch-action:none;cursor:grab;overflow:hidden}
+#mapSvg{width:100%;height:100%;display:block}
+#land path{fill:#0f0f0f;stroke:#3b3b3b;stroke-width:.6;vector-effect:non-scaling-stroke}
+#grat path{fill:none;stroke:#1d1d1d;stroke-width:.6;vector-effect:non-scaling-stroke}
+#grat text{display:none}
+.pin circle.dot{fill:#ecebe7}
+.pin circle.ring{fill:none;stroke:#ecebe7;stroke-width:1;vector-effect:non-scaling-stroke;opacity:.5}
+.pin text{fill:#ecebe7;font-family:var(--semi);letter-spacing:.06em;paint-order:stroke;stroke:#000;stroke-width:3px}
+.pin{cursor:pointer}
+.zoom{position:absolute;right:4vw;bottom:26px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:40px;height:40px;background:#0b0b0b;border:1px solid #2a2a2a;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:62%;overflow:auto;background:#070707;border-top:1px solid #222;padding:14px 4vw 30px;transform:translateY(100%);transition:transform .35s cubic-bezier(.2,.7,.2,1)}
+.sheet.on{transform:none}
+.sheetHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.sheetHead span{font-family:var(--grot);font-weight:700;font-size:26px;letter-spacing:-.03em}
+.sheetHead button{background:none;border:0;color:var(--ink);font:inherit;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+body.map .years,body.map .proto{display:none}
+
+/* decor: gauze, foil, tape, paper left on the glue */
+.dec{position:absolute;z-index:1;pointer-events:none;height:auto}
+.dec.gz{opacity:.95;filter:sepia(.35) brightness(.92) drop-shadow(1px 2px 1px rgba(0,0,0,.75)) drop-shadow(0 0 3px rgba(0,0,0,.35))}
+.dec.fl{z-index:2;filter:contrast(1.45) brightness(1.08) drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+.dec.bt{z-index:3;opacity:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+.dec.rs{opacity:.9;filter:sepia(.25) brightness(.95) drop-shadow(0 1px 1px rgba(0,0,0,.45))}
+.glueback{position:absolute;inset:0;transform:scaleX(-1);-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat;
+  background:radial-gradient(circle at 30% 40%,rgba(255,255,255,.18) 0 6px,transparent 7px) 0 0/23px 19px,radial-gradient(circle at 70% 60%,rgba(0,0,0,.28) 0 3px,transparent 4px) 0 0/17px 21px,linear-gradient(160deg,#e4e1d8,#bdb9ae);box-shadow:inset 0 0 18px rgba(0,0,0,.25)}
+/* stickers */
+.st{position:absolute;z-index:2;cursor:pointer}
+.st .face{position:relative;width:100%;height:100%;overflow:hidden;
+  box-shadow:0 1px 1px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);
+  display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:6px}
+.st .face::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(0,0,0,.22));mix-blend-mode:multiply}
+.st .face::after{content:"";position:absolute;inset:0;pointer-events:none;background:url('pole_tile.jpg') center/260px auto;mix-blend-mode:overlay;opacity:.55}
+.st .face{filter:saturate(.72) contrast(.96)}
+.st .face .crease{position:absolute;inset:0;pointer-events:none;background:linear-gradient(var(--ca),transparent 46%,rgba(255,255,255,.18) 49%,rgba(0,0,0,.16) 51%,transparent 54%)}
+.st.peel .face{clip-path:polygon(0 0,100% 0,100% 78%,82% 100%,0 100%)}
+.st.peel::after{content:"";position:absolute;right:0;bottom:0;width:18%;height:22%;
+  background:linear-gradient(135deg,#d6d4cc 0 48%,transparent 50%);filter:drop-shadow(-2px -2px 2px rgba(0,0,0,.45));z-index:3}
+.st.R{filter:brightness(.72)}
+.scrap{position:absolute;z-index:1;background:#cfcbc0;opacity:.5;mix-blend-mode:screen;
+  clip-path:polygon(8% 0,60% 6%,100% 30%,88% 90%,40% 100%,0 70%)}
+.t-big{font-family:'Arial Black',Impact,sans-serif;font-weight:900;line-height:.95}
+.t-thai{font-family:Tahoma,sans-serif;font-weight:700}
+.t-small{font-family:Arial,sans-serif;font-size:8px;line-height:1.2}
+.qr{width:34%;aspect-ratio:1;margin-top:5px;background:conic-gradient(#000 25%,#fff 0 50%,#000 0 75%,#fff 0) 0 0/25% 25%;border:2px solid #fff;outline:1px solid #000}
+
+/* catalogue label next to each sticker, typed on tape */
+.lbl{position:absolute;z-index:5;font-size:9px;pointer-events:none}
+.lbl .tape{font-size:9px;padding:2px 6px}
+
+/* wires */
+.wires{position:absolute;left:0;z-index:6;pointer-events:none}
+.wires canvas{pointer-events:none}
+.wireNote{position:absolute;z-index:7;left:7%;right:7%;text-align:center;pointer-events:none}
+.wireNote .tape{font-size:clamp(14px,4vw,19px)}
+
+/* margiela-style year label */
+.years{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:60;display:flex;gap:14px;
+  background:#f1efe9;color:#111;padding:6px 16px;font-family:var(--semi);font-weight:600;letter-spacing:.02em;font-size:10px;
+  background-image:radial-gradient(circle,#bdb9b0 1px,transparent 1.5px),radial-gradient(circle,#bdb9b0 1px,transparent 1.5px),radial-gradient(circle,#bdb9b0 1px,transparent 1.5px),radial-gradient(circle,#bdb9b0 1px,transparent 1.5px);
+  background-size:4px 4px;background-repeat:no-repeat;background-position:5px 4px,calc(100% - 5px) 4px,5px calc(100% - 4px),calc(100% - 5px) calc(100% - 4px);box-shadow:0 2px 10px rgba(0,0,0,.6)}
+.years span{position:relative;padding:0 2px}
+.years span.on::after{content:"";position:absolute;left:50%;top:50%;width:2.05em;height:2.05em;transform:translate(-50%,-50%);
+  border:1px solid #111;border-radius:50%}
+
+.end{text-align:left;padding:30px 8% 150px}
+.end h2{font-family:var(--semi);font-weight:600;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.end p{color:#b9b6ae;margin-top:12px;line-height:1.7;font-size:11px}
+.btn{display:inline-block;margin-top:22px;border:0;border-bottom:1px solid var(--ink);border-radius:0;padding:0 0 3px!important;color:var(--ink);background:none;font-family:var(--semi);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;cursor:pointer}
+.proto{position:fixed;bottom:58px;left:4vw;z-index:60;font-size:9px;color:#4a4844}
+
+/* evidence card */
+#card{position:fixed;inset:0;z-index:100;background:#000;display:none;overflow:auto}
+#card.on{display:block}
+.cardIn{max-width:560px;margin:0 auto;padding:64px 20px 60px}
+.close{position:fixed;top:14px;right:4vw;z-index:101;background:none;border:1.2px solid var(--ink);border-radius:99px;padding:3px 10px;color:var(--ink);font-family:var(--semi);font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.stage{position:relative;cursor:grab;user-select:none;-webkit-user-select:none;height:min(80vw,440px);display:flex;align-items:center;justify-content:center;background:#0b0b0b;overflow:hidden;perspective:900px}
+.stage .holder{position:relative;transition:transform .7s cubic-bezier(.2,.7,.2,1);transform-style:preserve-3d}
+.stage .holder.flip{transform:rotateY(180deg)}
+.stage .side{backface-visibility:hidden;position:absolute;inset:0}
+.stage .back{transform:rotateY(180deg);background:
+  radial-gradient(circle at 30% 40%,rgba(255,255,255,.14) 0 6px,transparent 7px) 0 0/23px 19px,
+  radial-gradient(circle at 70% 60%,rgba(0,0,0,.35) 0 3px,transparent 4px) 0 0/17px 21px,
+  url('pole_tile.jpg') center/180px auto,#8e9196;box-shadow:inset 0 0 30px rgba(0,0,0,.6)}
+.stage .ruler{position:absolute;bottom:12px;left:12px;right:12px;height:12px;border-top:1px solid #444;
+  background:repeating-linear-gradient(90deg,#444 0 1px,transparent 1px 10px)}
+.cardId{font-family:var(--grot);font-weight:700;font-size:20px;letter-spacing:-.01em;margin:18px 0 4px}
+.meta2 div{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid #1a1a1a;font-size:12px}
+.meta2 div span:first-child{color:var(--dim);font-family:var(--semi);font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.meta2 div span:last-child{text-align:right}
+.note{margin-top:18px;transform:rotate(-.8deg)}
+.details{margin-top:28px;display:grid;gap:18px}
+.details img{width:100%;display:block;filter:grayscale(.15) contrast(1.05)}
+.details figcaption{font-size:10px;color:var(--dim);margin-top:6px}
+.st.real::after{content:"";position:absolute;inset:0;pointer-events:none;background:url('pole_tile.jpg') center/260px auto;mix-blend-mode:overlay;opacity:.38;-webkit-mask:var(--m) center/100% 100% no-repeat;mask:var(--m) center/100% 100% no-repeat}
+.st.real img{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6)) drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+.note .tape{font-size:16px}
+
+/* index */
+#index{position:fixed;inset:0;z-index:40;background:#000;display:none;overflow:auto;padding:76px 4vw 90px}
+#index.on{display:block}
+#index h3{font-family:var(--grot);font-weight:700;font-size:22px;line-height:1;letter-spacing:-.02em}
+#index .sub{color:var(--dim);margin:6px 0 18px}
+.filters{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px}
+.filters button{background:none;border:0;color:var(--dim);font:inherit;cursor:pointer}
+.filters button.on{color:var(--ink);border-color:var(--ink)}
+.filters button{border:1px solid transparent!important;border-radius:99px;padding:2px 8px!important;text-transform:uppercase;font-family:var(--semi)!important;font-size:9.5px!important;letter-spacing:.06em}
+table{width:100%;border-collapse:collapse}
+th{font-weight:400;color:var(--dim);text-align:left;font-size:10px;padding:8px 4px;border-bottom:1px solid #333}
+td{padding:11px 4px;border-bottom:1px solid #161616;font-size:12px;cursor:pointer}
+tr:hover td{background:#0d0d0d}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">STUCK<small>An archive by Olga Eilenstein</small></div>
+  <div class="toggle"><button id="bPole" class="on">pole</button><button id="bMap">map</button><button id="bIndex">index</button></div>
+</header>
+
+<main>
+  <div class="poleWrap">
+    <div class="pole" id="pole">
+      <div class="top">
+        <h1>STUCK</h1>
+        <div class="no">N&ordm; 01 &nbsp;/&nbsp; STK</div>
+        <div class="lines">
+          <img class="tp" src="tape/c5.png" alt="stickers peeled from poles" style="width:min(46.4vw,265px)">
+          <img class="tp" src="tape/c6.png" alt="around the world." style="width:min(33.5vw,191px);margin-left:22%;margin-top:3px">
+        </div>
+        <div class="sig" id="count"></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="end">
+    <h2>End of the pole</h2>
+    <p>The archive is open.<br>Peeled a sticker somewhere? Send it with its location.</p>
+    <button class="btn" id="submitBtn">submit a sticker</button>
+    <p id="submitMsg" style="display:none;margin-top:14px">Submissions open soon.</p>
+  </section>
+</main>
+
+<div class="years" id="years"></div>
+
+
+<div id="index">
+  <h3>Index</h3>
+  <div class="sub" id="indexSub"></div>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="rows"></div>
+</div>
+
+<div id="map">
+  <div class="mapHead"><h3>Map</h3><div class="sub" id="mapSub"></div></div>
+  <div class="mapStage" id="mapStage"><svg id="mapSvg" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid meet"><g id="mapG"><g id="land"></g><g id="grat"></g><g id="pins"></g></g></svg>
+    <div class="zoom"><button id="zIn">+</button><button id="zOut">−</button><button id="zFit">fit</button></div></div>
+  <div class="sheet" id="sheet"><div class="sheetHead"><span id="sheetTitle"></span><button id="sheetClose">close</button></div><div class="grid" id="sheetGrid"></div></div>
+</div>
+
+<div id="card">
+  <button class="close" id="closeCard">close</button>
+  <div class="cardIn">
+    <div class="stage"><div class="holder" id="holder"></div><div class="ruler"></div></div>
+    <div class="cardId" id="cId"></div>
+    <button class="btn" id="flipBtn" style="margin:6px 0 14px">peel · see the back</button><span style="color:var(--dim);font-size:10px;margin-left:10px">or swipe the sticker</span>
+    <div class="meta2" id="cMeta"></div>
+    <div class="note" id="cNote"></div>
+    <div class="details" id="cDetails"></div>
+  </div>
+</div>
+
+<script>
+// placeholder data. face: L = lit front face, R = shadowed side face
+// real stickers come from items.json (filled by the Telegram bot). Placeholders below until there are enough.
+const SHOW_PLACEHOLDERS = true;
+const S = [
+ {id:"STK-BKK-0112",city:"Bangkok",street:"Soi Nana",year:2026,date:"03.11.2026",type:"Music",under:"Two older layers, one in Japanese",face:"L",
+  w:.30,h:.20,x:.10,bg:"#111",fg:"#f2f2f2",html:'<div class="t-big" style="font-size:22px">LIVE</div><div class="t-small" style="color:#ff3b30;font-size:9px;letter-spacing:.2em">SAT · SOI 11 · 23:00</div>',rot:-2,peel:true,
+  note:"Taken the morning after. The gig had already happened."},
+ {id:"STK-BKK-0108",city:"Bangkok",street:"Sukhumvit 22",year:2026,date:"18.09.2026",type:"Loans",under:"Bare concrete",face:"R",
+  w:.24,h:.15,x:.66,bg:"#ffe600",fg:"#d0021b",html:'<div class="t-thai" style="font-size:16px">กู้เงินด่วน</div><div class="t-small">08X-XXX-XXXX</div>',rot:3},
+ {id:"STK-HAN-0007",city:"Hanoi",street:"Hàng Bạc",year:2026,date:"02.04.2026",type:"Lost",under:"A torn concert poster",face:"L",
+  w:.26,h:.24,x:.24,bg:"#f4f1e8",fg:"#111",html:'<div class="t-big" style="font-size:15px">LOST CAT</div><div style="width:46%;aspect-ratio:1;background:#bbb;margin:5px 0"></div><div class="t-small">last seen in March</div>',rot:-1,peel:true,
+  note:"A lost cat, last seen in March. The pole was repainted the next week."},
+ {id:"STK-BKK-0097",city:"Bangkok",street:"Ratchada",year:2025,date:"21.12.2025",type:"Rent",under:"Glue only",face:"L",
+  w:.34,h:.13,x:.08,bg:"#1e6bff",fg:"#fff",html:'<div class="t-big" style="font-size:14px">ROOM FOR RENT</div><div class="t-small">ห้องให้เช่า · 08X-XXX-XXXX</div>',rot:2},
+ {id:"STK-TYO-0019",city:"Tokyo",street:"Koenji",year:2025,date:"09.10.2025",type:"Lost",under:"Three layers of silver tape",face:"R",
+  w:.22,h:.22,x:.64,bg:"#fff",fg:"#111",html:'<div style="font-family:serif;font-size:12px;font-weight:700">猫を探しています</div><div class="qr"></div>',rot:-3,peel:true},
+ {id:"STK-BKK-0081",city:"Bangkok",street:"Thonglor 10",year:2025,date:"14.07.2025",type:"Love",under:"A phone number, scratched out",face:"L",
+  w:.18,h:.18,x:.30,bg:"#ff4fa3",fg:"#fff",html:'<div class="t-big" style="font-size:22px">♥</div><div class="t-small">call me if you saw me</div>',rot:4,
+  note:"Someone wanted to be found."},
+ {id:"STK-SGN-0004",city:"Ho Chi Minh City",street:"Bùi Viện",year:2025,date:"30.03.2025",type:"Rent",under:"Bare concrete",face:"R",
+  w:.28,h:.15,x:.62,bg:"#e8e4d8",fg:"#c00",html:'<div class="t-big" style="font-size:13px">CHO THUÊ NHÀ</div><div class="t-small" style="color:#111">09X XXX XXXX</div>',rot:-2,peel:true},
+ {id:"STK-BKK-0052",city:"Bangkok",street:"Khao San",year:2024,date:"11.11.2024",type:"Music",under:"A sticker of the same band, older",face:"L",
+  w:.28,h:.28,x:.12,bg:"#0b0b0b",fg:"#c8ff00",html:'<div class="t-big" style="font-size:26px">NOISE</div><div class="t-small" style="letter-spacing:.3em">EVERY FRIDAY</div>',rot:-2,
+  note:"The same band, twice, one year apart."},
+ {id:"STK-BKK-0049",city:"Bangkok",street:"Khao San",year:2024,date:"11.11.2024",type:"Slogans",under:"STK-BKK-0052 was on top",face:"R",
+  w:.24,h:.11,x:.65,bg:"#fff",fg:"#000",html:'<div class="t-big" style="font-size:13px">NOTHING HERE</div>',rot:2,peel:true},
+ {id:"STK-CNX-0011",city:"Chiang Mai",street:"Nimman",year:2024,date:"05.02.2024",type:"Tattoo",under:"Glue only",face:"L",
+  w:.22,h:.22,x:.28,bg:"#2b2b2b",fg:"#e8d2a6",html:'<div style="font-family:serif;font-size:22px">✶</div><div class="t-small" style="letter-spacing:.25em">TATTOO · WALK IN</div>',rot:-3},
+ {id:"STK-BKK-0021",city:"Bangkok",street:"Yaowarat",year:2023,date:"19.08.2023",type:"Loans",under:"Two older loan ads, identical",face:"L",
+  w:.30,h:.16,x:.10,bg:"#00b050",fg:"#fff",html:'<div class="t-thai" style="font-size:15px">เงินด่วน 24 ชม.</div><div class="t-small">LINE: @XXXX</div>',rot:1,peel:true},
+ {id:"STK-KUL-0003",city:"Kuala Lumpur",street:"Petaling",year:2023,date:"01.06.2023",type:"Slogans",under:"Bare concrete",face:"R",
+  w:.20,h:.20,x:.66,bg:"#d0021b",fg:"#fff",html:'<div class="t-big" style="font-size:16px;line-height:1">STAY<br>AWAKE</div>',rot:-4},
+ {id:"STK-BKK-0003",city:"Bangkok",street:"Silom",year:2022,date:"23.04.2022",type:"Lost",under:"Nothing. The first one.",face:"L",
+  w:.28,h:.22,x:.22,bg:"#f4f1e8",fg:"#111",html:'<div class="t-big" style="font-size:13px">LOST DOG</div><div class="t-thai" style="font-size:11px">หมาหาย</div><div class="t-small">reward</div>',rot:2,peel:true,
+  note:"The first sticker in the archive."}
+];
+// rendered placeholder stickers (h / w ratio)
+const PH={"STK-BKK-0003":.777,"STK-BKK-0021":.521,"STK-BKK-0049":.361,"STK-BKK-0052":1,"STK-BKK-0081":1,"STK-BKK-0097":.401,"STK-BKK-0108":.633,
+ "STK-BKK-0112":.620,"STK-CNX-0011":1.001,"STK-HAN-0007":1,"STK-KUL-0003":.986,"STK-SGN-0004":.530,"STK-TYO-0019":1.050};
+S.forEach(s=>{if(!s.img&&PH[s.id]){s.img='items/ph/'+s.id+'.webp';s.ar=PH[s.id];s.peel=false;s.ph=true;}});
+const WIRES_BEFORE = -1;
+// perspective of each face of the pole: the corner points at the viewer, both faces turn away from it
+const FACE={L:{skew:-2,sx:.98},R:{skew:-4,sx:.72}}; // wires sit before this sticker
+
+const pole=document.getElementById('pole');
+const topBlock=pole.querySelector('.top');
+let wiresTop=0,wiresH=0,yearStarts=[];
+function build(){
+  pole.querySelectorAll('.st,.scrap,.lbl,.wires,.wireNote,.band,.bolt,.rust,.plate,.residue,.glue,.grain,.dec').forEach(n=>n.remove());
+  const W=pole.clientWidth, E=+getComputedStyle(document.documentElement).getPropertyValue('--edge');
+  let y=window.innerHeight*1.02; yearStarts=[]; const rects=[];
+  let lastYear=null;
+  S.forEach((s,i)=>{
+    if(s.year!==lastYear){yearStarts.push({year:s.year,y});lastYear=s.year;}
+    if(i===WIRES_BEFORE){wiresTop=y+20;wiresH=Math.max(780,window.innerHeight*1.15);y+=wiresH+110;yearStarts[yearStarts.length-1].y=y;}
+    const sc=(s.face==='R'?.82:1); const w=s.w*W*sc, h=(s.img? s.w*s.ar : s.h)*W*sc;
+    // keep each sticker inside one face of the pole, never across the corner
+    let x=s.x*W;
+    if(s.face==='L'){x=Math.min(Math.max(x,W*.06),E*W-w-W*.025);}
+    else{x=Math.min(Math.max(x,E*W+W*.03),W*.95-w);}
+    const e=document.createElement('div');e.className='st '+s.face+(s.peel?' peel':'')+(s.img?' real':'');
+    e.style.cssText=`width:${w}px;height:${h}px;left:${x}px;top:${y}px;`+
+      (s.face==='R'?`transform:skewY(${FACE.R.skew}deg) scaleX(${FACE.R.sx}) rotate(${s.rot*.35}deg);transform-origin:left center;`:`transform:skewY(${FACE.L.skew}deg) scaleX(${FACE.L.sx}) rotate(${s.rot*.35}deg);transform-origin:right center;`);
+    if(s.img)e.style.setProperty('--m','url('+s.img+')');
+    e.innerHTML=s.img?'<img src="'+s.img+'" alt="'+s.id+'">':'<div class="face" style="background:'+s.bg+';color:'+s.fg+';--ca:'+(20+i*37%140)+'deg">'+s.html.replace(/font-size:(\d+)px/g,(m,n)=>'font-size:'+(n*W/520).toFixed(1)+'px')+'<span class="crease"></span></div>';
+    e.onclick=()=>openCard(i);
+    pole.appendChild(e); rects.push([x-10,y-20,x+w+10,y+h+50]);
+    const l=document.createElement('div');l.className='lbl';
+    l.style.left=(s.face==='L'?x:x)+'px';l.style.top=(y+h+10)+'px';
+    l.innerHTML='<img src="tape/'+s.id+'.png" alt="'+s.id+'" style="height:'+Math.max(16,W*.034)+'px;width:auto;display:block">';
+    const F=FACE[s.face];l.style.transform=`skewY(${F.skew}deg) scaleX(${F.sx})`;l.style.transformOrigin=s.face==='R'?'left center':'right center';
+    pole.appendChild(l);
+    if(false){const r=document.createElement('div');r.className='scrap';
+      r.style.cssText=`width:${W*.08}px;height:${W*.05}px;left:${(s.face==='L'?E*.75:E*.2)*W}px;top:${y+h*.4}px`;pole.appendChild(r);}
+    y+=h+ (i%2? W*.10 : W*.18);
+  });
+
+  // ---- street details ----
+  const det=document.createElement('div');det.className='grain';pole.appendChild(det);
+  const H=y+420, rnd=(a,b)=>a+Math.random()*(b-a);
+  const hits=(x1,y1,x2,y2)=>rects.some(r=>x1<r[2]&&x2>r[0]&&y1<r[3]&&y2>r[1])||(y2>wiresTop-60&&y1<wiresTop+wiresH+120);
+  const free=(x1,x2,yy,hh)=>{let t=yy;while(hits(x1,t,x2,t+hh)&&t<H-hh)t+=30;return t;};
+  // utility plate, like Bangkok poles
+  [].forEach(([py,txt])=>{
+    py=free(E*W-W*.22,E*W-W*.02,py,W*.2);const pl=document.createElement('div');pl.className='plate';pl.innerHTML=txt;
+    pl.style.cssText+=`left:${E*W-W*.2}px;top:${py}px;font-size:${W*.04}px;transform:skewY(-2deg) scaleX(.98)`;pole.appendChild(pl);});
+  // things left on the pole: gauze, foil, clear tape, paper stuck to old glue
+  let ds=11;const dr=()=>(ds=(ds*16807)%2147483647)/2147483647, dR=(a,b)=>a+dr()*(b-a);
+  const DEC=[];const DEC_OFF=[['gauze1','gz',.46,.477,'L',1.3],['res1','rs',.17,.58,'L',1.9],['foil1','fl',.24,.74,'R',2.4],['btape1','bt',.62,.125,'L',3.1],
+    ['res2','rs',.15,.58,'R',3.8],['gauze2','gz',.34,.53,'L',4.6],['foil2','fl',.2,.81,'L',5.4],['res3','rs',.12,.61,'L',6.1],['btape2','bt',.4,.19,'R',6.9],['res1','rs',.13,.58,'L',7.6]];
+  DEC.forEach(([src,cls,wf,ar,face,pos])=>{
+    const sc=face==='R'?.8:1, w=wf*W*sc, h=w*ar;
+    let x= face==='L'? dR(W*.04,Math.max(W*.05,E*W-w-W*.02)) : dR(E*W+W*.02,Math.max(E*W+W*.03,W*.96-w));
+    const want=window.innerHeight*(.9+pos*.55);
+    let yy=want; if(cls!=='bt'&&cls!=='gz'){yy=free(x,x+w,want,h);}
+    else{ // tape and gauze may overlap a sticker edge, never cover the middle
+      let t=want;const mid=(a)=>rects.some(r=>x+w*.3<r[2]&&x+w*.7>r[0]&&a+h*.3<r[3]&&a+h*.7>r[1])||(a+h>wiresTop-60&&a<wiresTop+wiresH+120);
+      while(mid(t)&&t<H-h)t+=30;yy=t;}
+    if(yy>H-h-200)return;
+    const im=document.createElement('img');im.className='dec '+cls;im.src='decor/'+src+'.webp';im.alt='';
+    const F=FACE[face];im.style.cssText=`left:${x}px;top:${yy}px;width:${w}px;transform:skewY(${F.skew}deg) scaleX(${F.sx}) rotate(${dR(-8,8)}deg);transform-origin:${face==='R'?'left':'right'} center`;
+    pole.appendChild(im); if(cls!=='bt'&&cls!=='gz')rects.push([x,yy,x+w,yy+h]);
+  });
+  pole.style.height=(y+420)+'px';
+  document.getElementById('years').innerHTML=yearStarts.map(o=>'<span data-y="'+o.year+'">'+o.year+'</span>').join('');
+  onScroll();
+}
+
+function drawWires(W){
+  const vw=document.documentElement.clientWidth, H=wiresH, dpr=Math.min(window.devicePixelRatio||1,2);
+  const box=document.createElement('div');box.className='wires';
+  const off=pole.getBoundingClientRect().left+window.scrollX;
+  box.style.cssText=`top:${wiresTop}px;height:${H}px;left:${-off}px;width:${vw}px`;
+  const cv=document.createElement('canvas');cv.width=vw*dpr;cv.height=H*dpr;cv.style.cssText='width:100%;height:100%;display:block';
+  box.appendChild(cv);pole.appendChild(box);
+  const c=cv.getContext('2d');c.scale(dpr,dpr);c.lineCap='round';
+  let seed=7;const R=()=>(seed=(seed*16807)%2147483647)/2147483647;const rr=(a,b)=>a+R()*(b-a);
+  const poleL=off-window.scrollX, poleR=poleL+W, cx=(poleL+poleR)/2;
+  // a cable: catenary-like sag between two far points, passing the pole
+  function cable(y1,y2,sag,w,col,jit){
+    const pts=[];for(let t=0;t<=1.0001;t+=.02){const x=-60+t*(vw+120);const y=y1+(y2-y1)*t+sag*4*t*(1-t)+Math.sin(t*9+jit)*1.2;pts.push([x,y]);}
+    const path=()=>{c.beginPath();c.moveTo(pts[0][0],pts[0][1]);for(const p of pts)c.lineTo(p[0],p[1]);};
+    // shadow on the pole
+    c.save();c.globalAlpha=.35;c.strokeStyle='#000';c.lineWidth=w*1.3;c.filter='blur(3px)';c.translate(4,7);path();c.stroke();c.restore();
+    c.strokeStyle=col;c.lineWidth=w;path();c.stroke();
+    // rubber sheen
+    c.save();c.globalAlpha=.22;c.strokeStyle='#cfd6dd';c.lineWidth=Math.max(.6,w*.18);c.translate(0,-w*.28);path();c.stroke();c.restore();
+    return pts;
+  }
+  const cols=['#0b0b0c','#111214','#0d0e10','#16171a','#090909','#1c1d20'];
+  const bundles=[];
+  for(let b=0;b<4;b++){
+    const by=H*(.16+b*.2)+rr(-20,20), tilt=rr(-60,60), sag=rr(40,110), n=Math.round(rr(9,20)), spread=rr(16,34);
+    const pts=[];
+    for(let i=0;i<n;i++){const o=(i/n-.5)*spread+rr(-3,3);
+      const col=R()<.08?'#8d9096':(R()<.06?'#3d4a5c':cols[Math.floor(R()*cols.length)]);
+      pts.push(cable(by+o-tilt/2,by+o+tilt/2,sag+rr(-12,12),rr(2.5,8),col,rr(0,6)));}
+    bundles.push({by,tilt,sag,spread});
+    // zip ties along the bundle
+    for(let k=0;k<4;k++){const t=rr(.15,.85),x=-60+t*(vw+120),y=by-tilt/2+tilt*t+sag*4*t*(1-t);
+      c.save();c.translate(x,y);c.rotate(rr(-.2,.2));c.fillStyle=R()<.5?'#0a0a0a':'#d9d6cf';c.globalAlpha=.9;c.fillRect(-2.5,-spread*.75,5,spread*1.5);c.restore();}
+  }
+  // slack coils hanging next to the pole
+  for(let k=0;k<3;k++){
+    const x=cx+rr(-W*.35,W*.35), y=H*rr(.3,.7), r=rr(28,60);
+    for(let j=0;j<7;j++){
+      c.save();c.translate(x+rr(-5,5),y+rr(-4,8));c.rotate(rr(-.4,.4));
+      c.beginPath();c.ellipse(0,0,r*rr(.9,1.2),r*rr(.75,1),0,0,Math.PI*2);
+      c.globalAlpha=.35;c.strokeStyle='#000';c.lineWidth=7;c.filter='blur(3px)';c.translate(4,6);c.stroke();c.filter='none';c.translate(-4,-6);
+      c.globalAlpha=1;c.strokeStyle=cols[j%cols.length];c.lineWidth=rr(3,5.5);c.stroke();
+      c.globalAlpha=.2;c.strokeStyle='#cfd6dd';c.lineWidth=1;c.stroke();c.restore();
+    }
+    // tie holding the coil
+    c.fillStyle='#0a0a0a';c.fillRect(x-4,y-r*.9,8,r*.5);
+  }
+  // vertical risers along the pole corner, clamped
+  const E=+getComputedStyle(document.documentElement).getPropertyValue('--edge');
+  for(let k=0;k<2;k++){const x=poleL+E*W+(k?14:-10);
+    c.save();c.globalAlpha=.35;c.strokeStyle='#000';c.lineWidth=12;c.filter='blur(3px)';c.beginPath();c.moveTo(x+5,0);c.lineTo(x+5,H);c.stroke();c.restore();
+    c.strokeStyle='#0c0c0d';c.lineWidth=k?7:10;c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();
+    c.globalAlpha=.2;c.strokeStyle='#cfd6dd';c.lineWidth=1.5;c.beginPath();c.moveTo(x-2,0);c.lineTo(x-2,H);c.stroke();c.globalAlpha=1;}
+  // splice boxes
+  for(let k=0;k<2;k++){const x=cx+rr(-W*.3,W*.2),y=H*rr(.35,.65),bw=rr(28,40),bh=rr(42,64);
+    const g=c.createLinearGradient(x,0,x+bw,0);g.addColorStop(0,'#2a2c2f');g.addColorStop(.4,'#4a4d51');g.addColorStop(1,'#151617');
+    c.save();c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=10;c.shadowOffsetY=6;c.fillStyle=g;c.fillRect(x,y,bw,bh);c.restore();
+    c.fillStyle='#0b0b0b';c.fillRect(x+bw*.2,y+bh,bw*.15,10);c.fillRect(x+bw*.6,y+bh,bw*.15,14);}
+  const n=document.createElement('div');n.className='wireNote';n.style.top=(wiresTop+H+20)+'px';
+  n.innerHTML='<img src="tape/wire.png" alt="Below the wires, the city gets older." style="width:min(78%,560px);height:auto">';pole.appendChild(n);
+}
+
+function onScroll(){
+  const mid=window.scrollY+window.innerHeight*.5-pole.offsetTop;
+  let cur=yearStarts.length?yearStarts[0].year:null;
+  yearStarts.forEach(o=>{if(mid>=o.y-80)cur=o.year;});
+  document.querySelectorAll('#years span').forEach(s=>s.classList.toggle('on',+s.dataset.y===cur));
+}
+window.addEventListener('scroll',onScroll,{passive:true});
+
+const card=document.getElementById('card'),holder=document.getElementById('holder');
+function openCard(i){
+  const s=S[i];const W=Math.min(window.innerWidth*.66,330);
+  const ratio=s.img?s.ar:s.h/s.w, h=W*ratio;
+  holder.className='holder';ang=0;setAng(0,false);holder.style.width=W+'px';holder.style.height=h+'px';
+  if(s.img){
+    holder.innerHTML='<div class="side"><img src="'+s.img+'" style="width:100%;height:100%;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.7))"></div>'+
+      (s.back?'<div class="side" style="transform:rotateY(180deg);background:none;box-shadow:none"><img src="'+s.back+'" style="width:100%;height:100%;object-fit:fill;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.7))"></div>'
+      :'<div class="side" style="transform:rotateY(180deg)"><div class="glueback" style="--m:url('+s.img+')"></div></div>');
+  } else {
+    holder.innerHTML='<div class="side"><div class="st'+(s.peel?' peel':'')+'" style="position:absolute;inset:0;cursor:default"><div class="face" style="background:'+s.bg+';color:'+s.fg+'">'+
+      s.html.replace(/font-size:(\d+)px/g,(m,n)=>'font-size:'+(n*W/(s.w*520)).toFixed(1)+'px')+'</div></div></div><div class="side back"></div>';
+  }
+  document.getElementById('cId').textContent=s.id;
+  document.getElementById('cMeta').innerHTML=[['city',s.city],['street',s.street],['peeled',s.date],['type',s.type],['underneath',s.under]]
+    .map(r=>'<div><span>'+r[0]+'</span><span>'+r[1]+'</span></div>').join('');
+  document.getElementById('cNote').innerHTML=s.note?'<span class="tape">'+s.note+'</span>':'';
+  document.getElementById('cDetails').innerHTML=(s.details||[]).map((d,k)=>'<figure><img src="'+d+'" alt="detail" loading="lazy"><figcaption>'+s.id+' · detail 0'+(k+1)+'</figcaption></figure>').join('');
+  card.classList.add('on');card.scrollTop=0;
+}
+let ang=0;
+function setAng(a,anim){holder.style.transition=anim?'transform .6s cubic-bezier(.2,.7,.2,1)':'none';holder.style.transform='rotateY('+a+'deg)';}
+document.getElementById('flipBtn').onclick=()=>{ang=Math.round(ang/180)*180+180;setAng(ang,true);};
+(function(){const st=document.querySelector('.stage');let sx=null,base=0,lx=0,lt=0,v=0;
+  st.style.touchAction='pan-y';
+  st.addEventListener('pointerdown',e=>{sx=e.clientX;base=ang;lx=e.clientX;lt=performance.now();v=0;st.setPointerCapture(e.pointerId);});
+  st.addEventListener('pointermove',e=>{if(sx===null)return;const now=performance.now();v=(e.clientX-lx)/Math.max(1,now-lt);lx=e.clientX;lt=now;
+    ang=base+(e.clientX-sx)*0.55;setAng(ang,false);});
+  const end=()=>{if(sx===null)return;sx=null;let target=Math.round((ang+v*120)/180)*180;ang=target;setAng(ang,true);};
+  st.addEventListener('pointerup',end);st.addEventListener('pointercancel',end);
+})();
+document.getElementById('closeCard').onclick=()=>card.classList.remove('on');
+
+const idx=document.getElementById('index');let filt='all';
+function renderIndex(){
+  const cities=[...new Set(S.map(s=>s.city).filter(c=>c!=='to be added'))];
+  document.getElementById('indexSub').textContent=S.length+' items · '+cities.length+' cities';
+  const f=document.getElementById('filters');
+  f.innerHTML=['all',...cities].map(c=>'<button class="'+(c===filt?'on':'')+'">'+c.toLowerCase()+'</button>').join('');
+  [...f.children].forEach((b,k)=>b.onclick=()=>{filt=k?cities[k-1]:'all';renderIndex();});
+  const rows=document.getElementById('rows');
+  rows.innerHTML=S.map((s,i)=>({s,i})).filter(o=>filt==='all'||o.s.city===filt).map(o=>cellHTML(o.s,o.i)).join('');
+  [...rows.children].forEach(r=>r.onclick=()=>openCard(+r.dataset.i));
+}
+// ---------- cell (shared by index and map sheet) ----------
+function cellHTML(s,i){
+  const iw=Math.min(window.innerWidth*.26,150);
+  const icon=s.img?'<img src="'+s.img+'" alt="'+s.id+'">':
+    '<div class="mini" style="background:'+s.bg+';color:'+s.fg+';aspect-ratio:'+(s.w/s.h)+'">'+s.html.replace(/font-size:(\d+)px/g,(m,n)=>'font-size:'+(n*iw*.76/(s.w*520)).toFixed(1)+'px')+'</div>';
+  return '<div class="cell" data-i="'+i+'"><div class="ic">'+icon+'</div><div class="id">'+s.id+'</div><div class="ct">'+s.city+' · '+s.year+'</div></div>';
+}
+// ---------- map ----------
+const CITY={"Bangkok":[13.7563,100.5018],"Hanoi":[21.0285,105.8542],"Tokyo":[35.6762,139.6503],"Ho Chi Minh City":[10.8231,106.6297],
+  "Chiang Mai":[18.7883,98.9853],"Kuala Lumpur":[3.139,101.6869]};
+const LAT0=84, LAT1=-58;           // visible latitudes, equirectangular
+const P=(lat,lon)=>[(lon+180)/360*1000,(LAT0-lat)/(LAT0-LAT1)*520];
+const svgNS='http://www.w3.org/2000/svg';
+let mapBuilt=false, view={x:0,y:0,k:1};
+function el(n,a){const e=document.createElementNS(svgNS,n);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function applyView(){document.getElementById('mapG').setAttribute('transform',`translate(${view.x},${view.y}) scale(${view.k})`);
+  const r=document.getElementById('mapSvg').getBoundingClientRect();const sc=Math.min(r.width/1000,r.height/520)||1;
+  document.querySelectorAll('.pin').forEach(p=>{const s=1/(view.k*sc);p.querySelector('g').setAttribute('transform',`scale(${s})`);});}
+function ringToPath(r){return r.map((c,i)=>{const [x,y]=P(c[1],c[0]);return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}).join('')+'Z';}
+function drawLand(geo){const g=document.getElementById('land');g.innerHTML='';
+  (geo.features||[geo]).forEach(f=>{const gm=f.geometry||f;const polys=gm.type==='Polygon'?[gm.coordinates]:gm.type==='MultiPolygon'?gm.coordinates:[];
+    let d='';polys.forEach(poly=>poly.forEach(r=>{
+      // split rings that jump across the antimeridian
+      let seg=[];for(let k=0;k<r.length;k++){if(k&&Math.abs(r[k][0]-r[k-1][0])>180){if(seg.length>2)d+=ringToPath(seg);seg=[];}seg.push(r[k]);}
+      if(seg.length>2)d+=ringToPath(seg);}));
+    if(d)g.appendChild(el('path',{d}));});}
+function loadScript(src){return new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=src;sc.onload=ok;sc.onerror=no;document.head.appendChild(sc);});}
+async function tryCoastlines(){
+  try{
+    await loadScript('https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/datamaps@0.5.9/dist/datamaps.world.min.js');
+    const topo=window.Datamap&&Datamap.prototype.worldTopo;
+    if(!topo||!window.topojson)throw 0;
+    const key=Object.keys(topo.objects)[0];
+    drawLand(topojson.feature(topo,topo.objects[key]));
+  }catch(e){/* no coastlines: the coordinate grid stays on its own */}
+}
+function buildMap(){
+  const gr=document.getElementById('grat');
+  for(let lon=-180;lon<=180;lon+=15){const [x]=P(0,lon);gr.appendChild(el('path',{d:`M${x} -4000V4520`}));}
+  for(let lat=-75;lat<=75;lat+=15){const [,y]=P(lat,0);gr.appendChild(el('path',{d:`M-4000 ${y}H5000`}));
+    const t=el('text',{x:4,y:y-3});t.textContent=(lat>0?lat+'°N':lat<0?(-lat)+'°S':'0°');gr.appendChild(t);}
+  const pins=document.getElementById('pins');pins.innerHTML='';
+  const by={};S.forEach((s,i)=>{if(CITY[s.city])(by[s.city]=by[s.city]||[]).push(i);});
+  const pts=[];
+  Object.entries(by).forEach(([c,ids])=>{const [lat,lon]=CITY[c];const [x,y]=P(lat,lon);pts.push([x,y]);
+    const p=el('g',{class:'pin',transform:`translate(${x},${y})`});const inner=el('g',{});
+    inner.appendChild(el('circle',{class:'ring',r:6+ids.length*1.4}));inner.appendChild(el('circle',{class:'dot',r:3}));
+    const t=el('text',{x:10,y:4,'font-size':11});t.textContent=c.toUpperCase()+' · '+ids.length;inner.appendChild(t);
+    p.appendChild(inner);p.addEventListener('click',e=>{e.stopPropagation();openSheet(c,ids);});pins.appendChild(p);});
+  const unplaced=S.filter(s=>!CITY[s.city]).length;
+  document.getElementById('mapSub').textContent=Object.keys(by).length+' cities'+(unplaced?' · '+unplaced+' without location yet':'');
+  fitTo(pts);tryCoastlines();mapBuilt=true;
+}
+function fitTo(pts){
+  if(!pts.length){view={x:0,y:0,k:1};applyView();return;}
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const x0=Math.min(...xs)-40,x1=Math.max(...xs)+80,y0=Math.min(...ys)-40,y1=Math.max(...ys)+40;
+  const r=document.getElementById('mapSvg').getBoundingClientRect();const sc=Math.min(r.width/1000,r.height/520)||1;
+  const visW=r.width/sc,visH=r.height/sc;
+  const k=Math.min(14,visW/(x1-x0),visH/(y1-y0));view={k,x:500-k*(x0+x1)/2,y:260-k*(y0+y1)/2};applyView();
+}
+function openSheet(c,ids){document.getElementById('sheetTitle').textContent=c;
+  const g=document.getElementById('sheetGrid');g.innerHTML=ids.map(i=>cellHTML(S[i],i)).join('');
+  [...g.children].forEach(r=>r.onclick=()=>openCard(+r.dataset.i));document.getElementById('sheet').classList.add('on');}
+document.getElementById('sheetClose').onclick=()=>document.getElementById('sheet').classList.remove('on');
+// pan / pinch / wheel
+(function(){const st=document.getElementById('mapStage'),svg=document.getElementById('mapSvg');const ptrs=new Map();let last=null;
+  const toSvg=(cx,cy)=>{const r=svg.getBoundingClientRect();const sc=Math.min(r.width/1000,r.height/520);
+    return [(cx-r.left-(r.width-1000*sc)/2)/sc,(cy-r.top-(r.height-520*sc)/2)/sc];};
+  const zoomAt=(f,cx,cy)=>{const [sx,sy]=toSvg(cx,cy);const k=Math.max(.8,Math.min(40,view.k*f));const ff=k/view.k;
+    view.x=sx-(sx-view.x)*ff;view.y=sy-(sy-view.y)*ff;view.k=k;applyView();};
+  st.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,[e.clientX,e.clientY]);st.setPointerCapture(e.pointerId);last=null;});
+  st.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;const prev=ptrs.get(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    const r=svg.getBoundingClientRect();const sc=Math.min(r.width/1000,r.height/520);
+    if(ptrs.size===1){view.x+=(e.clientX-prev[0])/sc;view.y+=(e.clientY-prev[1])/sc;applyView();}
+    else if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(last)zoomAt(d/last,(a[0]+b[0])/2,(a[1]+b[1])/2);last=d;}});
+  const up=e=>{ptrs.delete(e.pointerId);last=null;};st.addEventListener('pointerup',up);st.addEventListener('pointercancel',up);
+  st.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.deltaY<0?1.15:1/1.15,e.clientX,e.clientY);},{passive:false});
+  document.getElementById('zIn').onclick=()=>{const r=st.getBoundingClientRect();zoomAt(1.5,r.left+r.width/2,r.top+r.height/2);};
+  document.getElementById('zOut').onclick=()=>{const r=st.getBoundingClientRect();zoomAt(1/1.5,r.left+r.width/2,r.top+r.height/2);};
+  document.getElementById('zFit').onclick=()=>fitTo(Object.keys(CITY).filter(c=>S.some(s=>s.city===c)).map(c=>P(...CITY[c])));
+})();
+// ---------- modes ----------
+const modes={pole:document.getElementById('bPole'),map:document.getElementById('bMap'),index:document.getElementById('bIndex')};
+function setMode(m){Object.entries(modes).forEach(([k,b])=>b.classList.toggle('on',k===m));
+  document.body.classList.toggle('idx',m==='index');document.body.classList.toggle('map',m==='map');
+  idx.classList.toggle('on',m==='index');document.getElementById('map').classList.toggle('on',m==='map');
+  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt)buildMap();}
+modes.pole.onclick=()=>setMode('pole');modes.map.onclick=()=>setMode('map');modes.index.onclick=()=>setMode('index');
+document.getElementById('submitBtn').onclick=()=>{document.getElementById('submitMsg').style.display='block'};
+function setCount(){const cs=new Set(S.map(s=>s.city).filter(c=>c!=='to be added')),ys=S.map(s=>s.year);
+document.getElementById('count').innerHTML='Olga Eilenstein<br>'+Math.min(...ys)+' / '+Math.max(...ys)+' · '+cs.size+' cities · '+S.length+' items';}
+
+// load the real archive, newest first, then start
+fetch('items.json?v='+Date.now()).then(r=>r.ok?r.json():[]).catch(()=>[]).then(real=>{
+  if(!SHOW_PLACEHOLDERS)S.length=0;
+  (real||[]).slice().reverse().forEach(it=>{ if(!S.some(s=>s.id===it.id))S.unshift(it); });
+  S.forEach(s=>{ if(s.lat!=null&&s.lon!=null&&s.city&&!CITY[s.city])CITY[s.city]=[s.lat,s.lon]; });
+  setCount(); build();
+  const h=decodeURIComponent(location.hash.slice(1)); const k=S.findIndex(s=>s.id===h); if(k>=0)openCard(k);
+});
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(build,200)});
+</script>
+</body>
+</html>

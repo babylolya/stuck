@@ -1,0 +1,54 @@
+[
+ {
+  "id": "STK-0002",
+  "city": "to be added",
+  "street": "to be added",
+  "country": "",
+  "lat": null,
+  "lon": null,
+  "year": 2026,
+  "date": "to be added",
+  "type": "Name tag",
+  "face": "L",
+  "under": "Paper tape and dry roots. The pole kept part of it.",
+  "w": 0.52,
+  "ar": 0.6,
+  "x": 0.06,
+  "rot": 1.4,
+  "img": "items/0002-front.webp",
+  "back": "items/0002-back.webp",
+  "backAr": 0.6,
+  "details": [
+   "items/0002-detail1.webp",
+   "items/0002-detail2.webp"
+  ],
+  "note": "Hello, my name is. The back remembers the letters in reverse."
+ },
+ {
+  "id": "STK-0001",
+  "city": "to be added",
+  "street": "to be added",
+  "country": "",
+  "lat": null,
+  "lon": null,
+  "year": 2026,
+  "date": "to be added",
+  "type": "Portrait",
+  "face": "L",
+  "under": "A layer of printed text. It stayed on the glue, mirrored.",
+  "w": 0.46,
+  "ar": 0.873,
+  "x": 0.07,
+  "rot": -1.2,
+  "img": "items/0001-front.webp",
+  "back": "items/0001-back.webp",
+  "backAr": 0.956,
+  "details": [
+   "items/0001-detail1.webp",
+   "items/0001-detail2.webp",
+   "items/0001-detail3.webp",
+   "items/0001-detail4.webp"
+  ],
+  "note": "A stranger, peeled whole. The back kept the words that were under him."
+ }
+]
