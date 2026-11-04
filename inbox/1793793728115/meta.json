@@ -1,0 +1,17 @@
+{
+ "city": "Pattaya City",
+ "street": "ถนนหาดตาแหวน",
+ "country": "Thailand",
+ "lat": 12.92403,
+ "lon": 100.77778,
+ "date": "22.09.2026",
+ "type": "Other",
+ "note": "Ko Larn Island / Table tag",
+ "chat": 8550267763,
+ "files": [
+  "front.heic",
+  "back.heic",
+  "detail1.heic",
+  "detail2.heic"
+ ]
+}
