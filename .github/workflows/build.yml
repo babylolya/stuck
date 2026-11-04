@@ -54,5 +54,5 @@ jobs:
         if: steps.inbox.outputs.new == '1'
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
-          SITE_URL: ${{ steps.deploy.outputs.page_url }}
+          SITE_URL: https://stuck-archive.pages.dev
         run: python tools/notify.py

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>STUCK · Prototype</title>
+<title>STUCK · an archive by Olga Eilenstein</title>
 <style>
 :root{}
 @font-face{font-family:'OEb';src:url('fonts/ob.woff') format('woff');font-weight:700;font-display:swap}
@@ -606,7 +606,7 @@ function setMode(m){Object.entries(modes).forEach(([k,b])=>b.classList.toggle('o
 modes.pole.onclick=()=>setMode('pole');modes.map.onclick=()=>setMode('map');modes.index.onclick=()=>setMode('index');
 document.getElementById('submitBtn').onclick=()=>{document.getElementById('submitMsg').style.display='block'};
 function setCount(){const cs=new Set(S.map(s=>s.city).filter(c=>c!=='to be added')),ys=S.map(s=>s.year);
-document.getElementById('count').innerHTML='Olga Eilenstein<br>'+Math.min(...ys)+' / '+Math.max(...ys)+' · '+cs.size+' cities · '+S.length+' items';}
+const y0=Math.min(...ys),y1=Math.max(...ys);document.getElementById('count').innerHTML='Olga Eilenstein<br>'+(y0===y1?y0:y0+' / '+y1)+' · '+cs.size+(cs.size===1?' city':' cities')+' · '+S.length+(S.length===1?' item':' items');}
 
 // load the real archive, newest first, then start
 fetch('items.json?v='+Date.now()).then(r=>r.ok?r.json():[]).catch(()=>[]).then(real=>{
