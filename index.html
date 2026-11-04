@@ -667,26 +667,23 @@ async function buildVector(){
   try{ loadCSS('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'); await loadJS('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'); }
   catch(e){ mapBuilt=false; return buildLeaflet(); }
   document.getElementById('map').classList.add('leaf');
-  const m=new maplibregl.Map({container:'lmap',style:'https://tiles.openfreemap.org/styles/positron',center:[100.5,13.75],zoom:5,
+  // take the light OpenFreeMap style and repaint it before the map is drawn: black land, darker water, grey streets, English names
+  const st=await (await fetch('https://tiles.openfreemap.org/styles/positron')).json();
+  const en=['coalesce',['get','name:en'],['get','name_en'],['get','name:latin'],['get','name']];
+  st.layers=st.layers.filter(l=>l.type!=='raster'&&l.type!=='fill-extrusion').map(l=>{const id=l.id.toLowerCase();l.paint=l.paint||{};l.layout=l.layout||{};
+    if(l.type==='background')l.paint['background-color']='#141414';
+    else if(l.type==='fill'){const c=/water/.test(id)?'#050505':/building/.test(id)?'#222':/park|wood|grass|landcover/.test(id)?'#171717':/residential/.test(id)?'#161616':'#151515';
+      l.paint['fill-color']=c;l.paint['fill-outline-color']=/building/.test(id)?'#2c2c2c':c;delete l.paint['fill-pattern'];}
+    else if(l.type==='line'){l.paint['line-color']=/waterway/.test(id)?'#050505':/boundary/.test(id)?'#4a4a4a':
+      /motorway|major/.test(id)?(/casing/.test(id)?'#141414':'#575757'):/rail/.test(id)?'#2a2a2a':/casing/.test(id)?'#141414':'#353535';}
+    else if(l.type==='symbol'){if(l.layout['text-field'])l.layout['text-field']=en;
+      l.paint['text-color']=/place|country|state|city|town/.test(id)?'#d6d2ca':/water/.test(id)?'#5a5a5a':'#9b978f';
+      l.paint['text-halo-color']='#000';l.paint['text-halo-width']=1.2;l.paint['icon-opacity']=0;}
+    return l;});
+  const m=new maplibregl.Map({container:'lmap',style:st,center:[100.5,13.75],zoom:5,
     attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false});
   m.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
-  m.touchZoomRotate.disableRotation();
-  const en=['coalesce',['get','name:en'],['get','name_en'],['get','name:latin'],['get','name']];
-  m.on('style.load',()=>{
-    m.getStyle().layers.forEach(l=>{const id=l.id.toLowerCase();try{
-      if(l.type==='background')m.setPaintProperty(l.id,'background-color','#0b0b0b');
-      else if(l.type==='fill'){const c=/water|ocean|sea/.test(id)?'#030303':/building/.test(id)?'#1b1b1b':/park|wood|grass|forest|landcover/.test(id)?'#101010':'#0d0d0d';
-        m.setPaintProperty(l.id,'fill-color',c);m.setPaintProperty(l.id,'fill-outline-color',/building/.test(id)?'#242424':c);}
-      else if(l.type==='fill-extrusion')m.setLayoutProperty(l.id,'visibility','none');
-      else if(l.type==='line'){const c=/water|river|stream|canal/.test(id)?'#070707':/boundary|admin/.test(id)?'#3a3a3a':
-        /motorway|trunk|primary/.test(id)?'#4a4a4a':/rail/.test(id)?'#262626':'#2e2e2e';m.setPaintProperty(l.id,'line-color',c);}
-      else if(l.type==='symbol'){
-        if(m.getLayoutProperty(l.id,'text-field')!==undefined){m.setLayoutProperty(l.id,'text-field',en);
-          m.setPaintProperty(l.id,'text-color',/place|city|town|country|state/.test(id)?'#cfcbc3':'#8d8a84');
-          m.setPaintProperty(l.id,'text-halo-color','#000');m.setPaintProperty(l.id,'text-halo-width',1.2);}
-        m.setPaintProperty(l.id,'icon-opacity',0);}
-    }catch(e){}});
-  });
+  m.touchZoomRotate.disableRotation(); window.__map=m;
   const pts=[];let noLoc=0;const marks=[];
   S.forEach((s,i)=>{
     let ll=(s.lat!=null&&s.lon!=null)?[s.lat,s.lon]:(CITY[s.city]||null);
