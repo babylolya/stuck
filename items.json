@@ -1,5 +1,34 @@
 [
  {
+  "id": "STK-0004",
+  "city": "Bangkok",
+  "street": "Prawet District",
+  "country": "Thailand",
+  "lat": 13.6948,
+  "lon": 100.65075,
+  "date": "27.06.2026",
+  "year": 2026,
+  "type": "Other",
+  "under": "",
+  "note": "Founded: Night Market Srinakarin entrance",
+  "face": "L",
+  "title": "",
+  "cm": [
+   5,
+   5
+  ],
+  "w": 0.52,
+  "ar": 1.236,
+  "x": 0.08,
+  "rot": -1.0,
+  "img": "items/0004-front.webp",
+  "details": [
+   "items/0004-detail1.webp",
+   "items/0004-detail2.webp",
+   "items/0004-detail3.webp"
+  ]
+ },
+ {
   "id": "STK-0003",
   "city": "Pattaya City",
   "street": "ถนนหาดตาแหวน",
