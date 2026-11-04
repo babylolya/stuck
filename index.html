@@ -155,6 +155,8 @@ body.map .years,body.map .proto{display:none}
 .leaflet-control-attribution a{color:#777!important}
 .leaflet-control-zoom a{background:#0b0b0b!important;color:#ecebe7!important;border-color:#2a2a2a!important;border-radius:0!important}
 .leaflet-bar{border:1px solid #2a2a2a!important;border-radius:0!important;box-shadow:none!important}
+.osm{filter:grayscale(1) invert(1) brightness(.78) contrast(1.15)}
+#lmap.far .spin span{display:none}
 .spin{position:relative}
 .spin i{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:#ecebe7;box-shadow:0 0 0 4px rgba(236,235,231,.18)}
 .spin span{position:absolute;left:10px;top:-7px;white-space:nowrap;font-size:9px;letter-spacing:.1em;color:#ecebe7;text-shadow:0 0 3px #000,0 0 3px #000}
@@ -645,8 +647,10 @@ async function buildLeaflet(){
   catch(e){ mapBuilt=false; return buildMap(); }
   document.getElementById('map').classList.add('leaf');
   const m=L.map('lmap',{zoomControl:true,attributionControl:true,worldCopyJump:true}).setView([13.75,100.5],5);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd',
-    attribution:'© OpenStreetMap · © CARTO'}).addTo(m);
+  // OpenStreetMap streets, turned into a dark grey map by a CSS filter (no key needed, goes down to single houses)
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'osm',
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+  const lab=()=>document.getElementById('lmap').classList.toggle('far',m.getZoom()<14); m.on('zoomend',lab);
   const pts=[];let noLoc=0;
   S.forEach((s,i)=>{
     let ll=(s.lat!=null&&s.lon!=null)?[s.lat,s.lon]:(CITY[s.city]||null);
@@ -660,6 +664,7 @@ async function buildLeaflet(){
   const cities=new Set(S.map(s=>s.city).filter(c=>c&&c!=='to be added'));
   document.getElementById('mapSub').textContent=cities.size+(cities.size===1?' city':' cities')+' · '+pts.length+' stickers'+(noLoc?' · '+noLoc+' without location':'');
   if(pts.length)m.fitBounds(pts,{padding:[60,60],maxZoom:12});
+  lab();
   setTimeout(()=>m.invalidateSize(),100);
 }
 // ---------- modes ----------

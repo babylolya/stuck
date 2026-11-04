@@ -18,10 +18,10 @@
    5
   ],
   "w": 0.52,
-  "ar": 0.705,
+  "ar": 0.569,
   "x": 0.1,
   "rot": 0.5,
-  "img": "items/0006-front.webp",
+  "img": "items/0006-front-797579.webp",
   "details": [
    "items/0006-detail1.webp",
    "items/0006-detail2.webp"
