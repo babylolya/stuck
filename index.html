@@ -50,7 +50,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-conte
 .pole::after{content:"";position:absolute;left:0;right:0;bottom:0;height:320px;pointer-events:none;z-index:4;background:linear-gradient(transparent,#000)}
 
 /* darkened top of the pole with the intro on it */
-.top{position:absolute;left:0;right:0;top:0;height:100vh;z-index:5;justify-content:flex-end!important;padding-bottom:21vh!important;
+.top{position:absolute;left:0;right:0;top:0;height:100vh;height:100lvh;z-index:5;justify-content:flex-end!important;padding-bottom:21vh!important;
   background:linear-gradient(180deg,rgba(0,0,0,.96) 0%,rgba(0,0,0,.88) 45%,rgba(0,0,0,.4) 80%,rgba(0,0,0,0) 100%);
   display:flex;flex-direction:column;justify-content:center;padding:0 7%;pointer-events:none}
 .top h1{position:relative;font-family:var(--grot);font-weight:700;font-size:clamp(58px,19vw,170px);line-height:.8;letter-spacing:-.05em;margin:0 0 26px 3%;color:#e4e1da;text-shadow:0 0 1px rgba(228,225,218,.5)}
@@ -339,14 +339,18 @@ const FACE={L:{skew:-2,sx:.98},R:{skew:-4,sx:.72}}; // wires sit before this sti
 const pole=document.getElementById('pole');
 const topBlock=pole.querySelector('.top');
 let wiresTop=0,wiresH=0,yearStarts=[];
+// height of the screen taken once: on phones the address bar hides while scrolling and changes innerHeight,
+// which must not move the stickers
+const VH=window.innerHeight;let builtW=0;
 function build(){
+  builtW=document.documentElement.clientWidth;
   pole.querySelectorAll('.st,.scrap,.lbl,.wires,.wireNote,.band,.bolt,.rust,.plate,.residue,.glue,.grain,.dec').forEach(n=>n.remove());
   const W=pole.clientWidth, E=+getComputedStyle(document.documentElement).getPropertyValue('--edge');
-  let y=window.innerHeight*1.02; yearStarts=[]; const rects=[];
+  let y=VH*1.02; yearStarts=[]; const rects=[];
   let lastYear=null;
   S.forEach((s,i)=>{
     if(s.year!==lastYear){yearStarts.push({year:s.year,y});lastYear=s.year;}
-    if(i===WIRES_BEFORE){wiresTop=y+20;wiresH=Math.max(780,window.innerHeight*1.15);y+=wiresH+110;yearStarts[yearStarts.length-1].y=y;}
+    if(i===WIRES_BEFORE){wiresTop=y+20;wiresH=Math.max(780,VH*1.15);y+=wiresH+110;yearStarts[yearStarts.length-1].y=y;}
     const sc=(s.face==='R'?.82:1); const wf=(s.cm&&s.cm[0])?Math.min(.62,Math.max(.06,s.cm[0]/POLE_CM)):s.w; const w=wf*W*sc, h=(s.img? wf*s.ar : s.h)*W*sc;
     // keep each sticker inside one face of the pole, never across the corner
     let x=s.x*W;
@@ -385,7 +389,7 @@ function build(){
   DEC.forEach(([src,cls,wf,ar,face,pos])=>{
     const sc=face==='R'?.8:1, w=wf*W*sc, h=w*ar;
     let x= face==='L'? dR(W*.04,Math.max(W*.05,E*W-w-W*.02)) : dR(E*W+W*.02,Math.max(E*W+W*.03,W*.96-w));
-    const want=window.innerHeight*(.9+pos*.55);
+    const want=VH*(.9+pos*.55);
     let yy=want; if(cls!=='bt'&&cls!=='gz'){yy=free(x,x+w,want,h);}
     else{ // tape and gauze may overlap a sticker edge, never cover the middle
       let t=want;const mid=(a)=>rects.some(r=>x+w*.3<r[2]&&x+w*.7>r[0]&&a+h*.3<r[3]&&a+h*.7>r[1])||(a+h>wiresTop-60&&a<wiresTop+wiresH+120);
@@ -616,7 +620,7 @@ fetch('items.json?v='+Date.now()).then(r=>r.ok?r.json():[]).catch(()=>[]).then(r
   setCount(); build();
   const h=decodeURIComponent(location.hash.slice(1)); const k=S.findIndex(s=>s.id===h); if(k>=0)openCard(k);
 });
-let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(build,200)});
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(document.documentElement.clientWidth!==builtW)build();},200)});
 </script>
 </body>
 </html>
