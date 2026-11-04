@@ -1,0 +1,21 @@
+{
+ "city": "Bangkok",
+ "street": "Tanao Road",
+ "country": "Thailand",
+ "lat": 13.75378,
+ "lon": 100.49853,
+ "date": "26.06.2026",
+ "type": "Slogans",
+ "note": "",
+ "title": "PEACE",
+ "cm": [
+  2,
+  4
+ ],
+ "chat": 8550267763,
+ "files": [
+  "front.jpg",
+  "detail1.jpg",
+  "detail2.jpg"
+ ]
+}
