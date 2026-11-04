@@ -1,0 +1,15 @@
+# Cloudflare deploys the bot from this folder on every push (Workers Builds).
+# Secrets (TG_TOKEN, GH_TOKEN, HOOK_SECRET) live in the Cloudflare dashboard, not here.
+name = "stuck-bot"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+keep_vars = true
+
+[vars]
+GH_REPO = "babylolya/stuck"
+OWNER_ID = "8550267763"
+
+[[kv_namespaces]]
+binding = "STATE"
+id = "809d8ce3e91d4b1b9cb0b16c57244162"

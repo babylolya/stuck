@@ -90,7 +90,11 @@ async function handle(u, env) {
   if (!st) return send(env, chat, "Нажми /new, чтобы добавить стикер.");
 
   const f = msg && fileOf(msg);
-  const loc = msg?.location || msg?.venue?.location;
+  let loc = msg?.location || msg?.venue?.location;
+  if (!loc && msg?.text && /google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\./i.test(msg.text)) {
+    loc = await fromGoogleLink(msg.text);
+    if (!loc) return send(env, chat, "Не смогла достать точку из этой ссылки. Пришли геопозицию через 📎 → Геопозиция.");
+  }
 
   switch (st.step) {
     case "front":
@@ -103,12 +107,12 @@ async function handle(u, env) {
       else if (f) st.back = f;
       else return send(env, chat, "Жду фото оборота или нажми «Оборота нет».");
       st.step = "details"; await putState(env, chat, st);
-      return send(env, chat, "3/6. Макро-фото деталей, сколько хочешь (можно альбомом).\nКогда всё, пришли ГЕОЛОКАЦИЮ места, где сняла стикер (📎 → Геопозиция, можно передвинуть точку).",
+      return send(env, chat, "3/6. Макро-фото деталей, сколько хочешь (можно альбомом).\nКогда всё, пришли ГЕОЛОКАЦИЮ места, где сняла стикер: 📎 → Геопозиция или ссылку-метку из Google Maps.",
         kb([[["Без макро, дальше", "nodetails"]]]));
 
     case "details":
       if (f) { st.details.push(f); await putState(env, chat, st); return; } // silent, albums come as many messages
-      if (data === "nodetails") return send(env, chat, "Пришли геолокацию (📎 → Геопозиция).", kb([[["Места не помню", "noloc"]]]));
+      if (data === "nodetails") return send(env, chat, "Пришли геолокацию (📎 → Геопозиция) или ссылку-метку из Google Maps.", kb([[["Места не помню", "noloc"]]]));
       if (loc || data === "noloc") {
         if (loc) {
           st.lat = +loc.latitude.toFixed(5); st.lon = +loc.longitude.toFixed(5);
@@ -118,7 +122,7 @@ async function handle(u, env) {
         return send(env, chat, `4/6. Место:\n${st.city}, ${st.country}\n${st.street}\n\nВерно?`,
           kb([[["Да", "placeok"], ["Исправить", "placeedit"]]]));
       }
-      return send(env, chat, "Жду макро-фото или геолокацию.");
+      return send(env, chat, "Жду макро-фото, геолокацию или ссылку из Google Maps.");
 
     case "place":
       if (data === "placeedit") { st.step = "placetext"; await putState(env, chat, st); return send(env, chat, "Напиши так: Город, улица\nНапример: Bangkok, Sukhumvit 22"); }
@@ -174,6 +178,32 @@ async function askType(env, chat, st) {
 function today() {
   const d = new Date(Date.now() + 7 * 3600e3); // Bangkok time
   return `${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}.${d.getUTCFullYear()}`;
+}
+
+// Google Maps link -> {latitude, longitude}. Short links (maps.app.goo.gl) are followed to the full one.
+async function fromGoogleLink(text) {
+  let url = (text.match(/https?:\/\/\S+/) || [])[0];
+  if (!url) return null;
+  for (let i = 0; i < 5 && /goo\.gl/.test(url); i++) {
+    const r = await fetch(url, { redirect: "manual", headers: { "User-Agent": "Mozilla/5.0" } });
+    const next = r.headers.get("location");
+    if (!next) { const body = await r.text(); const m = body.match(/https:\/\/www\.google\.[^"'\s]+\/maps[^"'\s]*/); url = m ? m[0] : url; break; }
+    url = next;
+  }
+  try { url = decodeURIComponent(url); } catch {}
+  const pats = [/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /[?&](?:q|ll|query|center|destination)=(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/, /\/(?:search|place|dir)\/(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/];
+  for (const p of pats) { const m = url.match(p); if (m) return { latitude: +m[1], longitude: +m[2] }; }
+  // a place link without coordinates: look the place name up in OpenStreetMap
+  const name = (url.match(/\/place\/([^/@?]+)/) || url.match(/[?&]q=([^&]+)/) || [])[1];
+  if (name) {
+    try {
+      const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(name.replace(/\+/g, " ")),
+        { headers: { "User-Agent": "stuck-archive-bot/1.0" } });
+      const j = await r.json(); if (j[0]) return { latitude: +j[0].lat, longitude: +j[0].lon };
+    } catch {}
+  }
+  return null;
 }
 
 async function geocode(lat, lon) {
