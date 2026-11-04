@@ -150,6 +150,10 @@ body.map .years,body.map .proto{display:none}
 /* street map */
 #lmap{position:absolute;left:0;right:0;top:150px;bottom:0;display:none;background:#0b0b0b}
 #map.leaf .mapStage{display:none}#map.leaf #lmap{display:block}
+.maplibregl-ctrl-group{background:#0b0b0b!important;border:1px solid #2a2a2a;border-radius:0!important}
+.maplibregl-ctrl-group button{filter:invert(1)}
+.maplibregl-ctrl-attrib{background:rgba(0,0,0,.6)!important;color:#555!important;font-size:8px}
+.maplibregl-ctrl-attrib a{color:#777!important}
 .leaflet-container{background:#0b0b0b!important;font-family:var(--semi)!important}
 .leaflet-control-attribution{background:rgba(0,0,0,.6)!important;color:#555!important;font-size:8px!important}
 .leaflet-control-attribution a{color:#777!important}
@@ -367,31 +371,47 @@ function build(){
   pole.querySelectorAll('.st,.scrap,.lbl,.wires,.wireNote,.band,.bolt,.rust,.plate,.residue,.glue,.grain,.dec').forEach(n=>n.remove());
   const W=pole.clientWidth, E=+getComputedStyle(document.documentElement).getPropertyValue('--edge');
   let y=VH*1.02; yearStarts=[]; const rects=[];
+  // masonry on the pole: two lanes on the lit face, one on the shadow face; small stickers fill the gaps,
+  // big ones span the whole lit face. Order stays chronological top to bottom.
+  const hash=t=>{let h=7;for(const c of String(t))h=(h*31+c.charCodeAt(0))%9973;return h/9973;};
+  const lanes=[{x0:W*.06,x1:W*.39,f:'L'},{x0:W*.39,x1:E*W-W*.025,f:'L'},{x0:E*W+W*.03,x1:W*.95,f:'R'}];
+  const ly=[y,y,y+W*.12];
+  const LBL=Math.max(16,W*.034)+14;
   let lastYear=null;
   S.forEach((s,i)=>{
-    if(s.year!==lastYear){yearStarts.push({year:s.year,y});lastYear=s.year;}
-    if(i===WIRES_BEFORE){wiresTop=y+20;wiresH=Math.max(780,VH*1.15);y+=wiresH+110;yearStarts[yearStarts.length-1].y=y;}
-    const sc=(s.face==='R'?.82:1); const wf=(s.cm&&s.cm[0])?Math.min(.62,Math.max(.06,s.cm[0]/POLE_CM)):s.w; const w=wf*W*sc, h=(s.img? wf*s.ar : s.h)*W*sc;
-    // keep each sticker inside one face of the pole, never across the corner
-    let x=s.x*W;
-    if(s.face==='L'){x=Math.min(Math.max(x,W*.06),E*W-w-W*.025);}
-    else{x=Math.min(Math.max(x,E*W+W*.03),W*.95-w);}
-    const e=document.createElement('div');e.className='st '+s.face+(s.peel?' peel':'')+(s.img?' real':'');
-    e.style.cssText=`width:${w}px;height:${h}px;left:${x}px;top:${y}px;`+
-      (s.face==='R'?`transform:skewY(${FACE.R.skew}deg) scaleX(${FACE.R.sx}) rotate(${s.rot*.35}deg);transform-origin:left center;`:`transform:skewY(${FACE.L.skew}deg) scaleX(${FACE.L.sx}) rotate(${s.rot*.35}deg);transform-origin:right center;`);
+    const wf=(s.cm&&s.cm[0])?Math.min(.62,Math.max(.06,s.cm[0]/POLE_CM)):s.w;
+    const base=wf*W, hb=(s.img? wf*s.ar : s.h)*W;
+    // candidates: [lanes used, face, scale]
+    const cands=[];
+    const fitsR=base*.82<=lanes[2].x1-lanes[2].x0;
+    if(base<=lanes[0].x1-lanes[0].x0){cands.push([[0],'L',1]);cands.push([[1],'L',1]);}
+    if(fitsR)cands.push([[2],'R',.82]);
+    if(base<=lanes[1].x1-lanes[0].x0)cands.push([[0,1],'L',1]);
+    if(!cands.length)cands.push([[0,1],'L',1]);
+    let best=null;
+    cands.forEach(c=>{const yy=Math.max(...c[0].map(k=>ly[k]));if(!best||yy<best.y-1)best={c,y:yy};});
+    const [ls,face,sc]=best.c, top=best.y, w=base*sc, h=hb*sc;
+    const x0=lanes[ls[0]].x0, x1=lanes[ls[ls.length-1]].x1;
+    const x=x0+Math.max(0,(x1-x0-w))*hash(s.id);
+    if(s.year!==lastYear){yearStarts.push({year:s.year,y:top});lastYear=s.year;}
+    const F=FACE[face];
+    const e=document.createElement('div');e.className='st '+face+(s.peel?' peel':'')+(s.img?' real':'');
+    e.style.cssText=`width:${w}px;height:${h}px;left:${x}px;top:${top}px;`+
+      `transform:skewY(${F.skew}deg) scaleX(${F.sx}) rotate(${(s.rot||0)*.35}deg);transform-origin:${face==='R'?'left':'right'} center;`;
     if(s.img)e.style.setProperty('--m','url('+s.img+')');
-    e.innerHTML=s.img?'<img src="'+s.img+'" alt="'+s.id+'">':'<div class="face" style="background:'+s.bg+';color:'+s.fg+';--ca:'+(20+i*37%140)+'deg">'+s.html.replace(/font-size:(\d+)px/g,(m,n)=>'font-size:'+(n*W/520).toFixed(1)+'px')+'<span class="crease"></span></div>';
+    e.innerHTML=s.img?'<img src="'+s.img+'" alt="'+s.id+'">':'<div class="face" style="background:'+s.bg+';color:'+s.fg+'">'+s.html+'</div>';
     e.onclick=()=>openCard(i);
-    pole.appendChild(e); rects.push([x-10,y-20,x+w+10,y+h+50]);
+    pole.appendChild(e); rects.push([x-10,top-20,x+w+10,top+h+50]);
     const l=document.createElement('div');l.className='lbl';
-    l.style.left=(s.face==='L'?x:x)+'px';l.style.top=(y+h+10)+'px';
-    l.innerHTML='<img src="tape/'+s.id+'.png" alt="'+s.id+'" style="height:'+Math.max(16,W*.034)+'px;width:auto;display:block">';
-    const F=FACE[s.face];l.style.transform=`skewY(${F.skew}deg) scaleX(${F.sx})`;l.style.transformOrigin=s.face==='R'?'left center':'right center';
+    l.style.left=x+'px';l.style.top=(top+h+8)+'px';
+    l.innerHTML='<img src="tape/'+s.id+'.png" alt="'+s.id+'" style="height:'+Math.max(14,W*.03)+'px;width:auto;display:block">';
+    l.style.transform=`skewY(${F.skew}deg) scaleX(${F.sx})`;l.style.transformOrigin=face==='R'?'left center':'right center';
     pole.appendChild(l);
-    if(false){const r=document.createElement('div');r.className='scrap';
-      r.style.cssText=`width:${W*.08}px;height:${W*.05}px;left:${(s.face==='L'?E*.75:E*.2)*W}px;top:${y+h*.4}px`;pole.appendChild(r);}
-    y+=h+ (i%2? W*.10 : W*.18);
+    const next=top+h+LBL+W*(.05+.09*hash(s.id+'g'));
+    ls.forEach(k=>ly[k]=next);
+    y=Math.max(...ly);
   });
+  y=Math.max(...ly);
 
   // ---- street details ----
   const det=document.createElement('div');det.className='grain';pole.appendChild(det);
@@ -641,6 +661,47 @@ document.getElementById('sheetClose').onclick=()=>document.getElementById('sheet
 // ---------- street map (Leaflet + dark CARTO tiles); the drawn world map stays as a fallback ----------
 function loadJS(u){return new Promise((ok,no)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=no;document.head.appendChild(e);});}
 function loadCSS(u){const l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);}
+// crisp vector map (MapLibre + OpenFreeMap, no key), recoloured to black and grey, labels in English
+async function buildVector(){
+  mapBuilt=true;
+  try{ loadCSS('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'); await loadJS('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'); }
+  catch(e){ mapBuilt=false; return buildLeaflet(); }
+  document.getElementById('map').classList.add('leaf');
+  const m=new maplibregl.Map({container:'lmap',style:'https://tiles.openfreemap.org/styles/positron',center:[100.5,13.75],zoom:5,
+    attributionControl:{compact:true},dragRotate:false,pitchWithRotate:false});
+  m.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
+  m.touchZoomRotate.disableRotation();
+  const en=['coalesce',['get','name:en'],['get','name_en'],['get','name:latin'],['get','name']];
+  m.on('style.load',()=>{
+    m.getStyle().layers.forEach(l=>{const id=l.id.toLowerCase();try{
+      if(l.type==='background')m.setPaintProperty(l.id,'background-color','#0b0b0b');
+      else if(l.type==='fill'){const c=/water|ocean|sea/.test(id)?'#030303':/building/.test(id)?'#1b1b1b':/park|wood|grass|forest|landcover/.test(id)?'#101010':'#0d0d0d';
+        m.setPaintProperty(l.id,'fill-color',c);m.setPaintProperty(l.id,'fill-outline-color',/building/.test(id)?'#242424':c);}
+      else if(l.type==='fill-extrusion')m.setLayoutProperty(l.id,'visibility','none');
+      else if(l.type==='line'){const c=/water|river|stream|canal/.test(id)?'#070707':/boundary|admin/.test(id)?'#3a3a3a':
+        /motorway|trunk|primary/.test(id)?'#4a4a4a':/rail/.test(id)?'#262626':'#2e2e2e';m.setPaintProperty(l.id,'line-color',c);}
+      else if(l.type==='symbol'){
+        if(m.getLayoutProperty(l.id,'text-field')!==undefined){m.setLayoutProperty(l.id,'text-field',en);
+          m.setPaintProperty(l.id,'text-color',/place|city|town|country|state/.test(id)?'#cfcbc3':'#8d8a84');
+          m.setPaintProperty(l.id,'text-halo-color','#000');m.setPaintProperty(l.id,'text-halo-width',1.2);}
+        m.setPaintProperty(l.id,'icon-opacity',0);}
+    }catch(e){}});
+  });
+  const pts=[];let noLoc=0;const marks=[];
+  S.forEach((s,i)=>{
+    let ll=(s.lat!=null&&s.lon!=null)?[s.lat,s.lon]:(CITY[s.city]||null);
+    if(!ll){noLoc++;return;}
+    const same=pts.filter(p=>Math.abs(p[0]-ll[0])<1e-5&&Math.abs(p[1]-ll[1])<1e-5).length;
+    ll=[ll[0]+same*0.00004,ll[1]+same*0.00004]; pts.push(ll);
+    const el=document.createElement('div');el.className='spin';el.innerHTML='<i></i><span>'+(s.title||s.id)+'</span>';
+    el.style.cursor='pointer';el.onclick=ev=>{ev.stopPropagation();openCard(i);};
+    marks.push(new maplibregl.Marker({element:el,anchor:'top-left'}).setLngLat([ll[1],ll[0]]).addTo(m));
+  });
+  const lab=()=>document.getElementById('lmap').classList.toggle('far',m.getZoom()<13);m.on('zoomend',lab);
+  const cities=new Set(S.map(s=>s.city).filter(c=>c&&c!=='to be added'));
+  document.getElementById('mapSub').textContent=cities.size+(cities.size===1?' city':' cities')+' · '+pts.length+' stickers'+(noLoc?' · '+noLoc+' without location':'');
+  m.on('load',()=>{ if(pts.length){const b=new maplibregl.LngLatBounds();pts.forEach(p=>b.extend([p[1],p[0]]));m.fitBounds(b,{padding:70,maxZoom:12,duration:0});} lab(); m.resize(); });
+}
 async function buildLeaflet(){
   mapBuilt=true;
   try{ loadCSS('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'); await loadJS('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'); }
@@ -672,7 +733,7 @@ const modes={pole:document.getElementById('bPole'),map:document.getElementById('
 function setMode(m){Object.entries(modes).forEach(([k,b])=>b.classList.toggle('on',k===m));
   document.body.classList.toggle('idx',m==='index');document.body.classList.toggle('map',m==='map');
   idx.classList.toggle('on',m==='index');document.getElementById('map').classList.toggle('on',m==='map');
-  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt)buildLeaflet();}
+  if(m==='index')renderIndex(); if(m==='map'&&!mapBuilt)buildVector();}
 modes.pole.onclick=()=>setMode('pole');modes.map.onclick=()=>setMode('map');modes.index.onclick=()=>setMode('index');
 document.getElementById('submitBtn').onclick=()=>{document.getElementById('submitMsg').style.display='block'};
 function setCount(){const cs=new Set(S.map(s=>s.city).filter(c=>c!=='to be added')),ys=S.map(s=>s.year);
