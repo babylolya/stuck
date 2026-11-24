@@ -1,0 +1,23 @@
+{
+ "city": "Bangkok",
+ "street": "Tai Soon Bar, Song Wat",
+ "country": "Thailand",
+ "lat": 13.75249,
+ "lon": 100.49351,
+ "date": "19.11.2026",
+ "type": "Portrait",
+ "note": "",
+ "title": "",
+ "cm": [
+  2,
+  5
+ ],
+ "chat": 8550267763,
+ "files": [
+  "front.jpg",
+  "back.jpg",
+  "detail1.jpg",
+  "detail2.jpg",
+  "detail3.jpg"
+ ]
+}
