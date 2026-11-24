@@ -1,5 +1,36 @@
 [
  {
+  "id": "STK-0008",
+  "city": "Bangkok",
+  "street": "Tai Soon Bar, Song Wat",
+  "country": "Thailand",
+  "lat": 13.75249,
+  "lon": 100.49351,
+  "date": "19.11.2026",
+  "year": 2026,
+  "type": "Portrait",
+  "under": "",
+  "note": "",
+  "face": "L",
+  "title": "",
+  "cm": [
+   2,
+   5
+  ],
+  "w": 0.42,
+  "ar": 1.5,
+  "x": 0.12,
+  "rot": 1.3,
+  "img": "items/0008-front.webp",
+  "details": [
+   "items/0008-detail1.webp",
+   "items/0008-detail2.webp",
+   "items/0008-detail3.webp"
+  ],
+  "back": "items/0008-back.webp",
+  "backAr": 1.493
+ },
+ {
   "id": "STK-0007",
   "city": "Si Sunthon",
   "street": "Mai Khao",
